@@ -24,11 +24,19 @@ import Color from './Color';
 import Font from './Font';
 import utils from './Utils';
 
+const COMPLEMENT = {
+  A: 'T', T: 'A', U: 'A', G: 'C', C: 'G',
+  Y: 'R', R: 'Y', S: 'S', W: 'W', K: 'M', M: 'K',
+  B: 'V', V: 'B', D: 'H', H: 'D', N: 'N',
+  '-': '-', '.': '.',
+};
+
 /**
  * SequenceTranslation draws all six reading frames around the sequence when
  * enough base-pair detail is visible. Direct frames are drawn outside the
  * backbone and reverse frames are drawn inside it. Reading frames restart at
- * each contig boundary.
+ * each contig boundary. Protein sequences are not stored: codons intersecting
+ * the visible range are translated and drawn in a streaming pass.
  *
  * SequenceTranslation is configured through {@link Sequence#translation}.
  *
@@ -245,6 +253,41 @@ class SequenceTranslation extends CGObject {
     return segments;
   }
 
+  _reverseComplementCodon(codon) {
+    return `${COMPLEMENT[codon[2]] || 'N'}${COMPLEMENT[codon[1]] || 'N'}${COMPLEMENT[codon[0]] || 'N'}`;
+  }
+
+  /**
+   * Visit translated codons without materializing a protein string or codon
+   * record array. Segments use contig-local coordinates and are normally
+   * calculated once per contig for the current draw.
+   * @private
+   */
+  _forEachCodon(contig, segments, strand, frame, codonTable, callback) {
+    const contigLength = contig.length;
+    const mapSequence = this.sequence.seq;
+    const highestStart = strand === 1 ? contigLength - 2 : contigLength - frame - 1;
+    const firstFrameStart = strand === 1 ? frame : ((((highestStart - 1) % 3) + 3) % 3) + 1;
+
+    for (const [visibleStart, visibleStop] of segments) {
+      const firstStart = firstFrameStart + Math.max(0, Math.ceil((visibleStart - 2 - firstFrameStart) / 3)) * 3;
+      const lastStart = Math.min(visibleStop, highestStart);
+      for (let localStart = firstStart; localStart <= lastStart; localStart += 3) {
+        if (localStart < 1 || localStart + 2 > contigLength) { continue; }
+        const mapStart = contig.lengthOffset + localStart;
+        const genomicCodon = mapSequence.substring(mapStart - 1, mapStart + 2);
+        const codon = strand === 1 ? genomicCodon : this._reverseComplementCodon(genomicCodon);
+        callback(
+          mapStart,
+          codon,
+          codonTable.table[codon] || 'X',
+          codonTable.starts.includes(codon),
+          codonTable.stops.includes(codon)
+        );
+      }
+    }
+  }
+
   /**
    * Return translated codons for one frame overlapping the visible range.
    * Exposed primarily to make the frame anchoring independently testable.
@@ -252,76 +295,57 @@ class SequenceTranslation extends CGObject {
    */
   codonsForRange(contig, visibleRange, strand, frame, codonTable) {
     const codons = [];
-    const contigLength = contig.length;
-    const mapSequence = this.sequence.seq;
     const segments = this._visibleContigSegments(contig, visibleRange);
-    const highestStart = strand === 1 ? contigLength - 2 : contigLength - frame - 1;
-    const firstFrameStart = strand === 1 ? frame : ((((highestStart - 1) % 3) + 3) % 3) + 1;
-
-    for (const [visibleStart, visibleStop] of segments) {
-      const firstStart = firstFrameStart + Math.max(0, Math.ceil((visibleStart - 2 - firstFrameStart) / 3)) * 3;
-      for (let localStart = firstStart; localStart <= Math.min(visibleStop, highestStart); localStart += 3) {
-        if (localStart < 1 || localStart + 2 > contigLength) { continue; }
-        const mapStart = contig.lengthOffset + localStart;
-        let codon = mapSequence.substring(mapStart - 1, mapStart + 2).toUpperCase();
-        if (strand === -1) {
-          codon = this.sequence.constructor.reverseComplement(codon);
-        }
-        codons.push({
-          start: mapStart,
-          stop: mapStart + 2,
-          middle: mapStart + 1,
-          strand,
-          frame,
-          codon,
-          aminoAcid: codonTable.table[codon] || 'X',
-          isStart: codonTable.starts.includes(codon),
-          isStop: codonTable.stops.includes(codon),
-        });
-      }
-    }
+    this._forEachCodon(contig, segments, strand, frame, codonTable, (start, codon, aminoAcid, isStart, isStop) => {
+      codons.push({
+        start,
+        stop: start + 2,
+        middle: start + 1,
+        strand,
+        frame,
+        codon,
+        aminoAcid,
+        isStart,
+        isStop,
+      });
+    });
     return codons;
   }
 
-  /**
-   * Resolve the normal, start, or stop appearance for a translated codon.
-   * Stop styling takes precedence for any unusual table that classifies a
-   * codon as both a start and a stop.
-   * @private
-   */
-  _styleForCodon(codon) {
-    if (codon.isStop && this.highlightStopCodons) {
-      return {backgroundColor: this.stopColor, borderColor: this.stopBorderColor, textColor: this.stopTextColor};
+  _drawCodon(start, aminoAcid, isStart, isStop, centerOffset, width, scaleFactor) {
+    let backgroundColor = this.backgroundColor;
+    let textColor = this.color;
+    let borderColor;
+    // Stop styling takes precedence for any unusual table that classifies a
+    // codon as both a start and a stop.
+    if (isStop && this.highlightStopCodons) {
+      backgroundColor = this.stopColor;
+      textColor = this.stopTextColor;
+      borderColor = this.stopBorderColor;
+    } else if (isStart && this.highlightStartCodons) {
+      backgroundColor = this.startColor;
+      textColor = this.startTextColor;
+      borderColor = this.startBorderColor;
     }
-    if (codon.isStart && this.highlightStartCodons) {
-      return {backgroundColor: this.startColor, borderColor: this.startBorderColor, textColor: this.startTextColor};
-    }
-    return {backgroundColor: this.backgroundColor, textColor: this.color};
-  }
 
-  _drawCodon(codon, centerOffset, width, scaleFactor) {
-    const style = this._styleForCodon(codon);
     this.canvas.drawElement({
       layer: 'map',
-      start: codon.start,
-      stop: codon.stop,
+      start,
+      stop: start + 2,
       centerOffset,
-      color: style.backgroundColor.rgbaString,
+      color: backgroundColor.rgbaString,
       width,
       decoration: 'arc',
       showShading: false,
-      showBorder: Boolean(style.borderColor),
-      borderColor: style.borderColor?.rgbaString,
+      showBorder: Boolean(borderColor),
+      borderColor: borderColor?.rgbaString,
       minArcLength: 0,
     });
 
     const ctx = this.canvas.context('map');
-    const origin = this.canvas.pointForBp(codon.middle, centerOffset);
-    ctx.fillStyle = style.textColor.rgbaString;
-    ctx.font = this.font.cssScaled(scaleFactor);
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillText(codon.aminoAcid, origin.x, origin.y + (this.font.height * scaleFactor * 0.35));
+    const origin = this.canvas.pointForBp(start + 1, centerOffset);
+    ctx.fillStyle = textColor.rgbaString;
+    ctx.fillText(aminoAcid, origin.x, origin.y + (this.font.height * scaleFactor * 0.35));
   }
 
   draw(visibleRange, backboneCenterOffset, pixelsPerBp) {
@@ -336,15 +360,17 @@ class SequenceTranslation extends CGObject {
     const ctx = this.canvas.context('map');
 
     ctx.save();
-    for (const strand of [1, -1]) {
-      const direction = strand;
-      for (let frame = 1; frame <= 3; frame++) {
-        const centerOffset = backboneCenterOffset + direction * (sequenceHalfThickness + (laneHeight / 2) + this.laneSpacing * scaleFactor + ((frame - 1) * laneStep));
-        for (const contig of contigs) {
-          const codons = this.codonsForRange(contig, visibleRange, strand, frame, codonTable);
-          for (const codon of codons) {
-            this._drawCodon(codon, centerOffset, laneHeight, scaleFactor);
-          }
+    ctx.font = this.font.cssScaled(scaleFactor);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    for (const contig of contigs) {
+      const segments = this._visibleContigSegments(contig, visibleRange);
+      for (const strand of [1, -1]) {
+        for (let frame = 1; frame <= 3; frame++) {
+          const centerOffset = backboneCenterOffset + strand * (sequenceHalfThickness + (laneHeight / 2) + this.laneSpacing * scaleFactor + ((frame - 1) * laneStep));
+          this._forEachCodon(contig, segments, strand, frame, codonTable, (start, codon, aminoAcid, isStart, isStop) => {
+            this._drawCodon(start, aminoAcid, isStart, isStop, centerOffset, laneHeight, scaleFactor);
+          });
         }
       }
     }

@@ -109,26 +109,47 @@ describe('SequenceTranslation', () => {
     const translation = cgv.sequence.translation;
     const range = new CGRange(cgv.sequence.mapContig, 1, cgv.sequence.length);
     const codons = translation.codonsForRange(cgv.contigs(1), range, 1, 1, cgv.codonTables.byID(11));
-    const startStyle = translation._styleForCodon(codons[0]);
-    const stopStyle = translation._styleForCodon(codons[1]);
-
-    expect(startStyle.backgroundColor.rgbaString).toBe('rgba(209,250,229,1)');
-    expect(startStyle.borderColor.rgbaString).toBe('rgba(5,150,105,1)');
-    expect(startStyle.textColor.rgbaString).toBe('rgba(6,95,70,1)');
-    expect(stopStyle.backgroundColor.rgbaString).toBe('rgba(254,226,226,1)');
-    expect(stopStyle.borderColor.rgbaString).toBe('rgba(220,38,38,1)');
-    expect(stopStyle.textColor.rgbaString).toBe('rgba(153,27,27,1)');
+    expect(translation.startTextColor.rgbaString).toBe('rgba(6,95,70,1)');
+    expect(translation.stopTextColor.rgbaString).toBe('rgba(153,27,27,1)');
 
     const drawElement = jest.spyOn(cgv.canvas, 'drawElement').mockImplementation(() => {});
-    translation._drawCodon(codons[0], 100, 15, 1);
+    translation._drawCodon(codons[0].start, codons[0].aminoAcid, codons[0].isStart, codons[0].isStop, 100, 15, 1);
     expect(drawElement).toHaveBeenCalledWith(expect.objectContaining({
       color: 'rgba(209,250,229,1)',
       showBorder: true,
       borderColor: 'rgba(5,150,105,1)',
     }));
+    translation._drawCodon(codons[1].start, codons[1].aminoAcid, codons[1].isStart, codons[1].isStop, 100, 15, 1);
+    expect(drawElement).toHaveBeenLastCalledWith(expect.objectContaining({
+      color: 'rgba(254,226,226,1)',
+      showBorder: true,
+      borderColor: 'rgba(220,38,38,1)',
+    }));
 
     translation.update({highlightStartCodons: false, highlightStopCodons: false});
-    expect(translation._styleForCodon(codons[0]).backgroundColor).toBe(translation.backgroundColor);
-    expect(translation._styleForCodon(codons[1]).backgroundColor).toBe(translation.backgroundColor);
+    translation._drawCodon(codons[0].start, codons[0].aminoAcid, codons[0].isStart, codons[0].isStop, 100, 15, 1);
+    expect(drawElement).toHaveBeenLastCalledWith(expect.objectContaining({
+      color: translation.backgroundColor.rgbaString,
+      showBorder: false,
+    }));
+  });
+
+  test('streams only visible codons during drawing instead of building frame arrays', () => {
+    const cgv = new Viewer('#map', {
+      sequence: {seq: 'ATG'.repeat(100000), translation: {visible: true}},
+    });
+    const translation = cgv.sequence.translation;
+    const visibleRange = new CGRange(cgv.sequence.mapContig, 150001, 150090);
+    const materializeCodons = jest.spyOn(translation, 'codonsForRange');
+    const visitCodons = jest.spyOn(translation, '_forEachCodon');
+    const drawElement = jest.spyOn(cgv.canvas, 'drawElement').mockImplementation(() => {});
+    jest.spyOn(cgv.canvas, 'pointForBp').mockReturnValue({x: 0, y: 0});
+
+    translation.draw(visibleRange, 100, 20);
+
+    expect(materializeCodons).not.toHaveBeenCalled();
+    expect(visitCodons).toHaveBeenCalledTimes(6);
+    expect(drawElement.mock.calls.length).toBeGreaterThan(0);
+    expect(drawElement.mock.calls.length).toBeLessThanOrEqual(192);
   });
 });

@@ -102,6 +102,8 @@ start and stop highlights default on when translation is configured, and their
 fill, border, and text colors can be styled independently. When supplied, the
 settings are preserved by
 [IO.toJSON](api/IO.html#toJSON) and [IO.loadJSON](api/IO.html#loadJSON).
+The six protein sequences are not stored in the viewer. Translation is computed
+on demand only for codons intersecting the visible base-pair-detail window.
 
 ```json
 {
