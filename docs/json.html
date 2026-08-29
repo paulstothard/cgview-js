@@ -90,14 +90,14 @@ The example below is shown as an object literal and only shows some of the possi
 Click on a key (e.g. backbone, captions, etc) for options and defaults.
 
 The following two options are available for most sections of the JSON but are
-only present when they have non-default values (see the first [feature](#lines.101-114) for an example with non-default values):
+only present when they have non-default values (see the first [feature](#lines.113-126) for an example with non-default values):
 - _visible_ [Default: true]
 - _meta_ [Default: {}].  The _meta_ key is a place to store [user/app-defined meta data](tutorials/details-meta-data.html).
 
 ```json
 {
     "cgview": {
-        "version": "1.7.0",
+        "version": "1.9.0",
         "created": "2022-08-08 13:29:07",
         "updated": "2022-08-08 13:29:07",
         "name": "My Cool Map",
@@ -121,10 +121,17 @@ only present when they have non-default values (see the first [feature](#lines.1
         },
         "ruler": {
             "font": "sans-serif,plain,10",
-            "color": "rgba(0,0,0,1)"
+            "color": "rgba(0,0,0,1)",
+            "labelPosition": "outer",
+            "labelStyle": "tangential"
         },
         "annotation": {
-            "font": "sans-serif,plain,12"
+            "font": "sans-serif,plain,12",
+            "drawExternalLabels": false,
+            "drawInlineLabels": true,
+            "inlineLabelMinZoomFactor": 2,
+            "inlineLabelMinFontSize": 8,
+            "inlineLabelPadding": 2
         },
         "dividers": {
             "track": {
@@ -174,6 +181,10 @@ only present when they have non-default values (see the first [feature](#lines.1
         "sequence": {
             "color": "rgb(0,0,0)",
             "font": "sans-serif,plain,14",
+            "translation": {
+                "visible": true,
+                "font": "monospace,plain,11"
+            },
             "contigs": [
                 {
                     "name": "CP021212",
@@ -397,4 +408,3 @@ only present when they have non-default values (see the first [feature](#lines.1
 
   </body>
 </html>
-

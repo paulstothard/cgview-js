@@ -42,10 +42,19 @@ import * as d3 from 'd3';
  * ---------------------------------|-----------|------------
  * [font](#font)                    | String    | A string describing the font [Default: 'sans-serif, plain, 10']. See {@link Font} for details.
  * [color](#color)                  | String    | A string describing the color [Default: 'black']. See {@link Color} for details.
+ * [labelPosition](#labelPosition)  | String    | Ruler sides that receive labels: 'inner', 'outer', 'both', or 'none' [Default: 'inner']
+ * [labelStyle](#labelStyle)        | String    | Label orientation: 'default' or 'tangential' [Default: 'default']
  * [visible](CGObject.html#visible) | Boolean   | Rulers are visible [Default: true]
  * [meta](CGObject.html#meta)       | Object    | [Meta data](../tutorials/details-meta-data.html) for ruler
  *
  * ### Examples
+ * ```js
+ * // Outer tangential labels with a tick-only inner ruler.
+ * cgv.ruler.update({
+ *   labelPosition: 'outer',
+ *   labelStyle: 'tangential'
+ * });
+ * ```
  *
  * @extends CGObject
  */
@@ -66,6 +75,8 @@ class Ruler extends CGObject {
     this.spacing = utils.defaultFor(options.spacing, 2);
     this.font = utils.defaultFor(options.font, 'sans-serif, plain, 10');
     this.color = new Color( utils.defaultFor(options.color, 'black') );
+    this.labelPosition = utils.defaultFor(options.labelPosition, 'inner');
+    this.labelStyle = utils.defaultFor(options.labelStyle, 'default');
     this.lineCap = 'round';
 
     this.viewer.trigger('ruler-update', { attributes: this.toJSON({includeDefaults: true}) });
@@ -148,6 +159,28 @@ class Ruler extends CGObject {
 
   set spacing(value) {
     this._spacing = value;
+  }
+
+  /**
+   * @member {String} - Sides on which labels are drawn: 'inner', 'outer', 'both', or 'none'.
+   */
+  get labelPosition() {
+    return this._labelPosition;
+  }
+
+  set labelPosition(value) {
+    this._labelPosition = ['inner', 'outer', 'both', 'none'].includes(value) ? value : 'inner';
+  }
+
+  /**
+   * @member {String} - Label orientation: 'default' or 'tangential'.
+   */
+  get labelStyle() {
+    return this._labelStyle;
+  }
+
+  set labelStyle(value) {
+    this._labelStyle = ['default', 'tangential'].includes(value) ? value : 'default';
   }
 
   /**
@@ -315,8 +348,10 @@ class Ruler extends CGObject {
       innerCenterOffset -= this.spacing;
       outerCenterOffset += this.spacing;
       this._updateTicks(innerCenterOffset, outerCenterOffset);
-      this.drawForCenterOffset(innerCenterOffset, 'inner');
-      this.drawForCenterOffset(outerCenterOffset, 'outer', false);
+      const innerLabels = this.labelPosition === 'inner' || this.labelPosition === 'both';
+      const outerLabels = this.labelPosition === 'outer' || this.labelPosition === 'both';
+      this.drawForCenterOffset(innerCenterOffset, 'inner', innerLabels);
+      this.drawForCenterOffset(outerCenterOffset, 'outer', outerLabels);
     }
   }
 
@@ -351,13 +386,37 @@ class Ruler extends CGObject {
     const ctx = this.canvas.context('map');
     // Put space between number and units
     label = label.replace(/([kM])?$/, ' $1bp');
-    // INNER
-    const innerPt = this.canvas.pointForBp(bp, centerOffset - this.rulerPadding);
-    const attachmentPosition = this.layout.clockPositionForBp(bp);
+    if (this.labelStyle === 'tangential' && this.viewer.format === 'circular') {
+      this.drawTangentialLabel(bp, label, centerOffset, position);
+      return;
+    }
+
+    const direction = position === 'inner' ? -1 : 1;
+    const labelAnchor = this.canvas.pointForBp(bp, centerOffset + (direction * this.rulerPadding));
+    const attachmentPosition = this.layout.clockPositionForBp(bp, position === 'outer');
     const labelWidth = this.font.width(ctx, label);
-    const labelPt = utils.rectOriginForAttachementPoint(innerPt, attachmentPosition, labelWidth, this.font.height);
+    const labelPt = utils.rectOriginForAttachementPoint(labelAnchor, attachmentPosition, labelWidth, this.font.height);
     // ctx.fillText(label, labelPt.x, labelPt.y);
     ctx.fillText(label, labelPt.x, labelPt.y + this.font.height);
+  }
+
+  drawTangentialLabel(bp, label, centerOffset, position) {
+    const ctx = this.canvas.context('map');
+    const direction = position === 'inner' ? -1 : 1;
+    const point = this.canvas.pointForBp(bp, centerOffset + direction * (this.rulerPadding + (this.font.height / 2)));
+    let angle = this.viewer.scale.bp(bp) + (Math.PI / 2);
+    while (angle > Math.PI) { angle -= Math.PI * 2; }
+    while (angle <= -Math.PI) { angle += Math.PI * 2; }
+    if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
+      angle += Math.PI;
+    }
+    ctx.save();
+    ctx.translate(point.x, point.y);
+    ctx.rotate(angle);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(label, 0, this.font.height * 0.35);
+    ctx.restore();
   }
 
   invertColors() {
@@ -374,7 +433,7 @@ class Ruler extends CGObject {
   update(attributes) {
     this.viewer.updateRecords(this, attributes, {
       recordClass: 'Ruler',
-      validKeys: ['color', 'font', 'visible']
+      validKeys: ['color', 'font', 'tickCount', 'tickWidth', 'tickLength', 'rulerPadding', 'spacing', 'labelPosition', 'labelStyle', 'visible']
     });
     this.viewer.trigger('ruler-update', { attributes });
   }
@@ -386,6 +445,13 @@ class Ruler extends CGObject {
     const json = {
       font: this.font.string,
       color: this.color.rgbaString,
+      tickCount: this.tickCount,
+      tickWidth: this.tickWidth,
+      tickLength: this.tickLength,
+      rulerPadding: this.rulerPadding,
+      spacing: this.spacing,
+      labelPosition: this.labelPosition,
+      labelStyle: this.labelStyle,
       // visible: this.visible
     };
     // Optionally add default values
@@ -398,5 +464,3 @@ class Ruler extends CGObject {
 }
 
 export default Ruler;
-
-

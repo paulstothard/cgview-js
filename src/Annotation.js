@@ -28,6 +28,7 @@ import Color from './Color';
 import NCList from './NCList';
 import Rect from './Rect';
 import utils from './Utils';
+import FeatureLabelRenderer from './FeatureLabelRenderer';
 
 /**
  * Annotation controls the drawing and layout of features labels
@@ -48,6 +49,12 @@ import utils from './Utils';
  * [color](#color)                  | String   | A string describing the color [Default: undefined]. If the color is undefined, the legend color for the feature will be used. See {@link Color} for details.
  * [onlyDrawFavorites](#onlyDrawFavorites) | Boolean   | Only draw labels for features that are favorited [Default: false]
  * [labelPlacement](#labelPlacement) | String   | The label placement method for positioning labels. Choices: 'default', 'angled' [Default: 'default']
+ * [drawExternalLabels](#drawExternalLabels) | Boolean | Draw the traditional labels outside the map [Default: true]
+ * [drawInlineLabels](#drawInlineLabels) | Boolean | Draw labels inside features when zoomed and space permits [Default: false]
+ * [inlineLabelMinZoomFactor](#inlineLabelMinZoomFactor) | Number | Minimum zoom factor for inline labels [Default: 2]
+ * [inlineLabelMinFontSize](#inlineLabelMinFontSize) | Number | Smallest permitted inline-label font in pixels [Default: 8]
+ * [inlineLabelPadding](#inlineLabelPadding) | Number | Padding around inline labels in pixels [Default: 2]
+ * [inlineLabelColor](#inlineLabelColor) | String | Inline-label color. When omitted, black or white is chosen for contrast.
  * [visible](CGObject.html#visible) | Boolean   | Labels are visible [Default: true]
  * [meta](CGObject.html#meta)       | Object    | [Meta data](tutorial-meta.html) for Annotation
  *
@@ -64,6 +71,13 @@ import utils from './Utils';
  * // Changing the label placement so that fast draw uses the default labels and full draw uses the angled labels
  * cgv.annotation.labelPlacementFast = 'default'
  * cgv.annotation.labelPlacementFull = 'angled'
+ *
+ * // Prefer labels inside features at zoom, without external duplicates.
+ * cgv.annotation.update({
+ *   drawExternalLabels: false,
+ *   drawInlineLabels: true,
+ *   inlineLabelMinFontSize: 8
+ * });
  * ```
  *
  * @extends CGObject
@@ -91,6 +105,13 @@ class Annotation extends CGObject {
     this.lineCap = 'round';
     // this.lineCap = 'butt';
     this.onlyDrawFavorites = utils.defaultFor(options.onlyDrawFavorites, false);
+    this.drawExternalLabels = utils.defaultFor(options.drawExternalLabels, true);
+    this.drawInlineLabels = utils.defaultFor(options.drawInlineLabels, false);
+    this.inlineLabelMinZoomFactor = utils.defaultFor(options.inlineLabelMinZoomFactor, 2);
+    this.inlineLabelMinFontSize = utils.defaultFor(options.inlineLabelMinFontSize, 8);
+    this.inlineLabelPadding = utils.defaultFor(options.inlineLabelPadding, 2);
+    this.inlineLabelColor = options.inlineLabelColor;
+    this._featureLabelRenderer = new FeatureLabelRenderer(this);
 
     this.labelPlacement = utils.defaultFor(options.labelPlacement, 'default');
     // this.labelPlacementFast = 'default';
@@ -178,6 +199,67 @@ class Annotation extends CGObject {
    */
   get length() {
     return this._labels.length;
+  }
+
+  get inlineLabelColor() {
+    return this._inlineLabelColor;
+  }
+
+  get drawExternalLabels() {
+    return this._drawExternalLabels;
+  }
+
+  set drawExternalLabels(value) {
+    this._drawExternalLabels = Boolean(value);
+  }
+
+  get drawInlineLabels() {
+    return this._drawInlineLabels;
+  }
+
+  set drawInlineLabels(value) {
+    this._drawInlineLabels = Boolean(value);
+  }
+
+  get inlineLabelMinZoomFactor() {
+    return this._inlineLabelMinZoomFactor;
+  }
+
+  set inlineLabelMinZoomFactor(value) {
+    this._inlineLabelMinZoomFactor = Math.max(1, Number(value) || 1);
+  }
+
+  get inlineLabelMinFontSize() {
+    return this._inlineLabelMinFontSize;
+  }
+
+  set inlineLabelMinFontSize(value) {
+    this._inlineLabelMinFontSize = Math.max(1, Number(value) || 1);
+  }
+
+  get inlineLabelPadding() {
+    return this._inlineLabelPadding;
+  }
+
+  set inlineLabelPadding(value) {
+    this._inlineLabelPadding = Math.max(0, Number(value) || 0);
+  }
+
+  set inlineLabelColor(value) {
+    if (value === undefined || value.toString() === 'Color') {
+      this._inlineLabelColor = value;
+    } else {
+      this._inlineLabelColor = new Color(value);
+    }
+  }
+
+  /**
+   * Draw names inside the supplied visible features.
+   * @private
+   */
+  drawFeatureLabels(features, centerOffset, slotThickness, visibleRange) {
+    if (!this.visible || !this.drawInlineLabels) { return; }
+    this._featureLabelRenderer.draw(features, centerOffset, slotThickness, visibleRange);
   }
 
   /**
@@ -454,6 +536,10 @@ class Annotation extends CGObject {
   }
 
   draw(innerCenterOffset, outerCenterOffset, fast) {
+    if (!this.drawExternalLabels) {
+      this._visibleLabels = new CGArray();
+      return;
+    }
     this._fastDraw = fast;
     // TRY refreshing through addFeatures/remove
     // if (this._labels.length !== this._labelsNCList.length) {
@@ -545,7 +631,7 @@ class Annotation extends CGObject {
   update(attributes) {
     this.viewer.updateRecords(this, attributes, {
       recordClass: 'Annotation',
-      validKeys: ['color', 'font', 'onlyDrawFavorites', 'visible', 'labelPlacement']
+      validKeys: ['color', 'font', 'onlyDrawFavorites', 'visible', 'labelPlacement', 'drawExternalLabels', 'drawInlineLabels', 'inlineLabelMinZoomFactor', 'inlineLabelMinFontSize', 'inlineLabelPadding', 'inlineLabelColor']
     });
     this.viewer.trigger('annotation-update', { attributes });
   }
@@ -558,6 +644,12 @@ class Annotation extends CGObject {
       font: this.font.string,
       color: this.color && this.color.rgbaString,
       onlyDrawFavorites: this.onlyDrawFavorites,
+      drawExternalLabels: this.drawExternalLabels,
+      drawInlineLabels: this.drawInlineLabels,
+      inlineLabelMinZoomFactor: this.inlineLabelMinZoomFactor,
+      inlineLabelMinFontSize: this.inlineLabelMinFontSize,
+      inlineLabelPadding: this.inlineLabelPadding,
+      inlineLabelColor: this.inlineLabelColor && this.inlineLabelColor.rgbaString,
       // In most cases the full and fast method will be the same.
       // We could export both but for now we will only use the 'full' and it will be for both fast and full.
       labelPlacement: this.labelPlacementFull.name,
@@ -574,4 +666,3 @@ class Annotation extends CGObject {
 
 
 export default Annotation;
-

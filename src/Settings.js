@@ -44,6 +44,7 @@ import utils from './Utils';
  * [borderColor](#borderColor)         | String    | A string describing the border color of features [Default: 'rgba(0,0,0,1)']. See {@link Color} for details.
  * [borderThickness](#borderThickness) | Number    | The width of the border drawn on features in pixels [Default: 1.5]
  * [arrowHeadLength](#arrowHeadLength) | Number    | Length of feature arrowheads as a proportion of the feature thickness. From 0 (no arrowhead) to 1 (arrowhead as long on the feature is thick) [Default: 0.3]
+ * [geneticCode](#geneticCode)         | Number    | NCBI genetic code used for sequence and feature translation [Default: 11]
  * [initialMapThicknessProportion](#initialMapThicknessProportion) | Number  | Proportion of canvas size to use for drawing map tracks at a zoomFactor of 1 [Default: 0.1]
  * [maxMapThicknessProportion](#maxMapThicknessProportion) | Number  | Proportion of canvas size to use for drawing map tracks at max zoom level [Default: 0.5]
  *
@@ -251,5 +252,4 @@ class Settings {
 }
 
 export default Settings;
-
 

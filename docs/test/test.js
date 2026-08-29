@@ -19,7 +19,7 @@ console.log('Available Maps (from map.js):', maps)
 // const defaultMap = 'pcET30c';
 // const defaultMap = 'pcDNA3';
 // const defaultMap = 'paper';
-const defaultMap = 'test_single_bases';
+const defaultMap = 'zoom_details';
 
 
 
@@ -212,6 +212,7 @@ function loadMapFromID(id) {
     const distance = cgv.sequence.length / 100;
     labelDistance.value = Math.floor(distance);
     labelFontSize.value = cgv.annotation.font.size;
+    syncZoomDetailControls();
 
     cgv.draw();
     setTimeout( () => {
@@ -290,6 +291,66 @@ clearBtn.addEventListener('click', (e) => {
 ///////////////////////////////////////////////////////////////////////////////
 // Options
 ///////////////////////////////////////////////////////////////////////////////
+
+const translationsCheckbox = document.getElementById('zoom-detail-translations');
+const sms3RulerCheckbox = document.getElementById('zoom-detail-ruler');
+const inlineLabelsCheckbox = document.getElementById('zoom-detail-inline-labels');
+const externalLabelsCheckbox = document.getElementById('zoom-detail-external-labels');
+const geneticCodeSelect = document.getElementById('zoom-detail-genetic-code');
+const inlineLabelMinFont = document.getElementById('zoom-detail-min-font');
+const zoomDetailButton = document.getElementById('zoom-detail-zoom');
+
+const geneticCodeOptions = Object.entries(cgv.codonTables.names()).map(([id, name]) =>
+  `<option value='${id}'>${id} — ${name}</option>`
+);
+geneticCodeSelect.innerHTML = geneticCodeOptions.join('\n');
+
+function syncZoomDetailControls() {
+  translationsCheckbox.checked = cgv.sequence.translation.visible;
+  sms3RulerCheckbox.checked = cgv.ruler.labelPosition === 'outer' && cgv.ruler.labelStyle === 'tangential';
+  inlineLabelsCheckbox.checked = cgv.annotation.drawInlineLabels;
+  externalLabelsCheckbox.checked = cgv.annotation.drawExternalLabels;
+  geneticCodeSelect.value = String(cgv.geneticCode);
+  inlineLabelMinFont.value = cgv.annotation.inlineLabelMinFontSize;
+}
+
+translationsCheckbox.addEventListener('change', (e) => {
+  cgv.sequence.translation.update({visible: e.target.checked});
+  cgv.draw();
+});
+
+sms3RulerCheckbox.addEventListener('change', (e) => {
+  cgv.ruler.update(e.target.checked ?
+    {labelPosition: 'outer', labelStyle: 'tangential'} :
+    {labelPosition: 'inner', labelStyle: 'default'}
+  );
+  cgv.draw();
+});
+
+inlineLabelsCheckbox.addEventListener('change', (e) => {
+  cgv.annotation.update({drawInlineLabels: e.target.checked});
+  cgv.draw();
+});
+
+externalLabelsCheckbox.addEventListener('change', (e) => {
+  cgv.annotation.update({drawExternalLabels: e.target.checked});
+  cgv.draw();
+});
+
+geneticCodeSelect.addEventListener('change', (e) => {
+  cgv.settings.update({geneticCode: Number(e.target.value)});
+  cgv.draw();
+});
+
+inlineLabelMinFont.addEventListener('change', (e) => {
+  cgv.annotation.update({inlineLabelMinFontSize: Number(e.target.value)});
+  cgv.draw();
+});
+
+zoomDetailButton.addEventListener('click', () => {
+  const targetBp = cgv.features(1)?.mapRange.middle || cgv.sequence.length / 2;
+  cgv.zoomTo(targetBp, cgv.maxZoomFactor, {duration: 800});
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // Full Size Map

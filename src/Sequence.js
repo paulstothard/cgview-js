@@ -24,6 +24,7 @@ import CGArray from './CGArray';
 import CGRange from './CGRange';
 import Contig from './Contig';
 import SequenceExtractor from './SequenceExtractor';
+import SequenceTranslation from './SequenceTranslation';
 import Color from './Color';
 import Font from './Font';
 import utils from './Utils';
@@ -67,12 +68,18 @@ import utils from './Utils';
  * [contigs](#contigs)<sup>iu</sup> | Array     | Array of contigs. Contigs are ignored if a seq is provided.
  * [font](#font)                    | String    | A string describing the font [Default: 'SansSerif, plain, 14']. See {@link Font} for details.
  * [color](#color)                  | String    | A string describing the sequence color [Default: 'black']. See {@link Color} for details.
+ * [translation](#translation)      | Object    | Six-frame translation options. See {@link SequenceTranslation}. [Default: hidden]
  * [visible](CGObject.html#visible) | Boolean   | Sequence sequence is visible when zoomed in enough [Default: true]
  * [meta](CGObject.html#meta)       | Object    | [Meta data](../tutorials/details-meta-data.html)
  * 
  * <sup>iu</sup> Ignored on Sequence update
  *
  * ### Examples
+ * ```js
+ * // Show six-frame translation when base-pair detail is visible.
+ * cgv.sequence.translation.update({ visible: true });
+ * cgv.settings.update({ geneticCode: 11 });
+ * ```
  *
  * @extends CGObject
  */
@@ -103,6 +110,7 @@ class Sequence extends CGObject {
     this._contigs = new CGArray();
 
     this.createMapContig(options);
+    this._translation = new SequenceTranslation(this, options.translation);
 
     this.viewer.trigger('sequence-update', { attributes: this.toJSON({includeDefaults: true}) });
   }
@@ -390,6 +398,21 @@ class Sequence extends CGObject {
     return this._bpSpacing;
   }
 
+  /**
+   * @member {SequenceTranslation} - Six-frame translation settings and renderer.
+   */
+  get translation() {
+    return this._translation;
+  }
+
+  /**
+   * Backbone thickness required by the two nucleotide rows, without translation lanes.
+   * @private
+   */
+  get baseThickness() {
+    return (this.bpSpacing * 2) + (this.bpMargin * 8);
+  }
+
   set bpSpacing(value) {
     this._bpSpacing = value;
     this.viewer._updateZoomMax();
@@ -412,7 +435,15 @@ class Sequence extends CGObject {
    * @private
    */
   get thickness() {
-    return (this.bpSpacing * 2) + (this.bpMargin * 8);
+    return this.baseThickness + this.translation.thickness;
+  }
+
+  /**
+   * Scale used as nucleotide and amino-acid detail fades in while zooming.
+   * @private
+   */
+  detailScaleFactor(pixelsPerBp) {
+    return Math.min(1, pixelsPerBp / (this.bpSpacing - this.bpMargin));
   }
 
   get isLinear() {
@@ -895,7 +926,7 @@ class Sequence extends CGObject {
     const seqZoomFactor = 0.25; // The scale at which the sequence will first appear.
     if (pixelsPerBp < (this.bpSpacing - this.bpMargin) * seqZoomFactor) { return; }
 
-    const scaleFactor = Math.min(1, pixelsPerBp / (this.bpSpacing - this.bpMargin));
+    const scaleFactor = this.detailScaleFactor(pixelsPerBp);
 
     const centerOffset = backbone.adjustedCenterOffset;
     const range = backbone.visibleRange;
@@ -929,6 +960,7 @@ class Sequence extends CGObject {
         bp++;
       }
       ctx.restore();
+      this.translation.draw(range, centerOffset, pixelsPerBp);
     }
   }
 
@@ -960,6 +992,9 @@ class Sequence extends CGObject {
       color: this.color.rgbString,
       contigs: this._contigs.map( c => c.toJSON(options) )
     };
+    if (this.translation.visible || this.translation._configured || options.includeDefaults) {
+      json.translation = this.translation.toJSON(options);
+    }
     // Optionally add default values
     if (!this.visible || options.includeDefaults) {
       json.visible = this.visible;

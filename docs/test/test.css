@@ -75,6 +75,30 @@ hr {
   overflow: auto;
 }
 
+.section-zoom-details {
+  font-size: 13px;
+}
+.zoom-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 5px 10px;
+}
+.zoom-detail-grid label {
+  margin: 0;
+}
+#zoom-detail-zoom {
+  display: block;
+  margin: 8px auto 0;
+}
+.zoom-detail-help {
+  color: #6c757d;
+  font-size: 10px;
+  line-height: 1.25;
+  margin-top: 6px;
+  text-align: center;
+}
+
 #open-proksee-div {
   text-align: center;
   margin-top: 7px;

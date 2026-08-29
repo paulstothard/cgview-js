@@ -11,6 +11,10 @@
 - Added click selection: click selects one feature, shift-click adds to the selection, Escape clears selected features.
 - Added marquee selection with shift-drag.
 - Added a Selection checkbox to the test page options.
+- Added opt-in six-frame sequence translation at base-pair zoom, using the viewer genetic code and contig-aware reading frames.
+- Added configurable ruler label side and tangential label orientation.
+- Added fit-aware inline feature labels with bounded font shrinking and independent external-label visibility.
+- Added a focused zoom-detail map and live controls to the test page.
 
 
 ## 1.8.2 - 2026-05-04 - Paper Release
