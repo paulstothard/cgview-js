@@ -90,4 +90,45 @@ describe('SequenceTranslation', () => {
     expect(cgv.io.toJSON().cgview.sequence.translation.visible).toBe(true);
     expect(cgv.io.toJSON().cgview.settings.geneticCode).toBe(2);
   });
+
+  test('styles start and stop codons independently and allows either highlight to be disabled', () => {
+    const cgv = new Viewer('#map', {
+      sequence: {
+        seq: 'ATGTAACCC',
+        translation: {
+          visible: true,
+          startColor: '#d1fae5',
+          startBorderColor: '#059669',
+          startTextColor: '#065f46',
+          stopColor: '#fee2e2',
+          stopBorderColor: '#dc2626',
+          stopTextColor: '#991b1b',
+        },
+      },
+    });
+    const translation = cgv.sequence.translation;
+    const range = new CGRange(cgv.sequence.mapContig, 1, cgv.sequence.length);
+    const codons = translation.codonsForRange(cgv.contigs(1), range, 1, 1, cgv.codonTables.byID(11));
+    const startStyle = translation._styleForCodon(codons[0]);
+    const stopStyle = translation._styleForCodon(codons[1]);
+
+    expect(startStyle.backgroundColor.rgbaString).toBe('rgba(209,250,229,1)');
+    expect(startStyle.borderColor.rgbaString).toBe('rgba(5,150,105,1)');
+    expect(startStyle.textColor.rgbaString).toBe('rgba(6,95,70,1)');
+    expect(stopStyle.backgroundColor.rgbaString).toBe('rgba(254,226,226,1)');
+    expect(stopStyle.borderColor.rgbaString).toBe('rgba(220,38,38,1)');
+    expect(stopStyle.textColor.rgbaString).toBe('rgba(153,27,27,1)');
+
+    const drawElement = jest.spyOn(cgv.canvas, 'drawElement').mockImplementation(() => {});
+    translation._drawCodon(codons[0], 100, 15, 1);
+    expect(drawElement).toHaveBeenCalledWith(expect.objectContaining({
+      color: 'rgba(209,250,229,1)',
+      showBorder: true,
+      borderColor: 'rgba(5,150,105,1)',
+    }));
+
+    translation.update({highlightStartCodons: false, highlightStopCodons: false});
+    expect(translation._styleForCodon(codons[0]).backgroundColor).toBe(translation.backgroundColor);
+    expect(translation._styleForCodon(codons[1]).backgroundColor).toBe(translation.backgroundColor);
+  });
 });

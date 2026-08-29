@@ -41,7 +41,13 @@ import utils from './Utils';
  * [color](#color)                   | String  | Amino-acid text color [Default: 'black']
  * [backgroundColor](#backgroundColor) | String | Normal codon background color
  * [startColor](#startColor)         | String  | Start-codon background color
+ * [startBorderColor](#startBorderColor) | String | Start-codon border color
+ * [startTextColor](#startTextColor) | String  | Start-codon amino-acid color
  * [stopColor](#stopColor)           | String  | Stop-codon background color
+ * [stopBorderColor](#stopBorderColor) | String | Stop-codon border color
+ * [stopTextColor](#stopTextColor)   | String  | Stop-codon amino-acid color
+ * [highlightStartCodons](#highlightStartCodons) | Boolean | Highlight starts defined by the active genetic code [Default: true]
+ * [highlightStopCodons](#highlightStopCodons) | Boolean | Highlight stops defined by the active genetic code [Default: true]
  * [visible](CGObject.html#visible)  | Boolean | Show six-frame translations at sufficient zoom [Default: false]
  *
  * @extends CGObject
@@ -56,8 +62,14 @@ class SequenceTranslation extends CGObject {
     this.font = utils.defaultFor(options.font, 'monospace, plain, 11');
     this.color = utils.defaultFor(options.color, 'black');
     this.backgroundColor = utils.defaultFor(options.backgroundColor, 'rgba(120,120,120,0.14)');
-    this.startColor = utils.defaultFor(options.startColor, 'rgba(46,160,67,0.32)');
-    this.stopColor = utils.defaultFor(options.stopColor, 'rgba(220,53,69,0.32)');
+    this.startColor = utils.defaultFor(options.startColor, '#dcfce7');
+    this.startBorderColor = utils.defaultFor(options.startBorderColor, '#16a34a');
+    this.startTextColor = utils.defaultFor(options.startTextColor, '#166534');
+    this.stopColor = utils.defaultFor(options.stopColor, '#fee2e2');
+    this.stopBorderColor = utils.defaultFor(options.stopBorderColor, '#b91c1c');
+    this.stopTextColor = utils.defaultFor(options.stopTextColor, '#b91c1c');
+    this.highlightStartCodons = utils.defaultFor(options.highlightStartCodons, true);
+    this.highlightStopCodons = utils.defaultFor(options.highlightStopCodons, true);
     this.laneSpacing = utils.defaultFor(options.laneSpacing, 2);
     this.minimumScale = utils.defaultFor(options.minimumScale, 0.5);
 
@@ -115,12 +127,60 @@ class SequenceTranslation extends CGObject {
     this._startColor = value.toString() === 'Color' ? value : new Color(value);
   }
 
+  get startBorderColor() {
+    return this._startBorderColor;
+  }
+
+  set startBorderColor(value) {
+    this._startBorderColor = value.toString() === 'Color' ? value : new Color(value);
+  }
+
+  get startTextColor() {
+    return this._startTextColor;
+  }
+
+  set startTextColor(value) {
+    this._startTextColor = value.toString() === 'Color' ? value : new Color(value);
+  }
+
   get stopColor() {
     return this._stopColor;
   }
 
   set stopColor(value) {
     this._stopColor = value.toString() === 'Color' ? value : new Color(value);
+  }
+
+  get stopBorderColor() {
+    return this._stopBorderColor;
+  }
+
+  set stopBorderColor(value) {
+    this._stopBorderColor = value.toString() === 'Color' ? value : new Color(value);
+  }
+
+  get stopTextColor() {
+    return this._stopTextColor;
+  }
+
+  set stopTextColor(value) {
+    this._stopTextColor = value.toString() === 'Color' ? value : new Color(value);
+  }
+
+  get highlightStartCodons() {
+    return this._highlightStartCodons;
+  }
+
+  set highlightStartCodons(value) {
+    this._highlightStartCodons = Boolean(value);
+  }
+
+  get highlightStopCodons() {
+    return this._highlightStopCodons;
+  }
+
+  set highlightStopCodons(value) {
+    this._highlightStopCodons = Boolean(value);
   }
 
   get laneHeight() {
@@ -223,28 +283,45 @@ class SequenceTranslation extends CGObject {
     return codons;
   }
 
-  _drawCodon(codon, centerOffset, width, scaleFactor, codonTable) {
-    const backgroundColor = codon.isStop ? this.stopColor : (codon.isStart ? this.startColor : this.backgroundColor);
+  /**
+   * Resolve the normal, start, or stop appearance for a translated codon.
+   * Stop styling takes precedence for any unusual table that classifies a
+   * codon as both a start and a stop.
+   * @private
+   */
+  _styleForCodon(codon) {
+    if (codon.isStop && this.highlightStopCodons) {
+      return {backgroundColor: this.stopColor, borderColor: this.stopBorderColor, textColor: this.stopTextColor};
+    }
+    if (codon.isStart && this.highlightStartCodons) {
+      return {backgroundColor: this.startColor, borderColor: this.startBorderColor, textColor: this.startTextColor};
+    }
+    return {backgroundColor: this.backgroundColor, textColor: this.color};
+  }
+
+  _drawCodon(codon, centerOffset, width, scaleFactor) {
+    const style = this._styleForCodon(codon);
     this.canvas.drawElement({
       layer: 'map',
       start: codon.start,
       stop: codon.stop,
       centerOffset,
-      color: backgroundColor.rgbaString,
+      color: style.backgroundColor.rgbaString,
       width,
       decoration: 'arc',
       showShading: false,
-      showBorder: false,
+      showBorder: Boolean(style.borderColor),
+      borderColor: style.borderColor?.rgbaString,
       minArcLength: 0,
     });
 
     const ctx = this.canvas.context('map');
     const origin = this.canvas.pointForBp(codon.middle, centerOffset);
-    ctx.fillStyle = this.color.rgbaString;
+    ctx.fillStyle = style.textColor.rgbaString;
     ctx.font = this.font.cssScaled(scaleFactor);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText(codonTable.table[codon.codon] || 'X', origin.x, origin.y + (this.font.height * scaleFactor * 0.35));
+    ctx.fillText(codon.aminoAcid, origin.x, origin.y + (this.font.height * scaleFactor * 0.35));
   }
 
   draw(visibleRange, backboneCenterOffset, pixelsPerBp) {
@@ -266,7 +343,7 @@ class SequenceTranslation extends CGObject {
         for (const contig of contigs) {
           const codons = this.codonsForRange(contig, visibleRange, strand, frame, codonTable);
           for (const codon of codons) {
-            this._drawCodon(codon, centerOffset, laneHeight, scaleFactor, codonTable);
+            this._drawCodon(codon, centerOffset, laneHeight, scaleFactor);
           }
         }
       }
@@ -278,10 +355,29 @@ class SequenceTranslation extends CGObject {
     this._configured = true;
     this.viewer.updateRecords(this, attributes, {
       recordClass: 'SequenceTranslation',
-      validKeys: ['font', 'color', 'backgroundColor', 'startColor', 'stopColor', 'laneSpacing', 'minimumScale', 'visible']
+      validKeys: [
+        'font', 'color', 'backgroundColor',
+        'startColor', 'startBorderColor', 'startTextColor',
+        'stopColor', 'stopBorderColor', 'stopTextColor',
+        'highlightStartCodons', 'highlightStopCodons',
+        'laneSpacing', 'minimumScale', 'visible'
+      ]
     });
     this.viewer.layout._adjustProportions();
     this.viewer.trigger('sequence-translation-update', { attributes });
+  }
+
+  invertColors() {
+    this.update({
+      color: this.color.invert().rgbaString,
+      backgroundColor: this.backgroundColor.invert().rgbaString,
+      startColor: this.startColor.invert().rgbaString,
+      startBorderColor: this.startBorderColor.invert().rgbaString,
+      startTextColor: this.startTextColor.invert().rgbaString,
+      stopColor: this.stopColor.invert().rgbaString,
+      stopBorderColor: this.stopBorderColor.invert().rgbaString,
+      stopTextColor: this.stopTextColor.invert().rgbaString,
+    });
   }
 
   toJSON() {
@@ -290,7 +386,13 @@ class SequenceTranslation extends CGObject {
       color: this.color.rgbaString,
       backgroundColor: this.backgroundColor.rgbaString,
       startColor: this.startColor.rgbaString,
+      startBorderColor: this.startBorderColor.rgbaString,
+      startTextColor: this.startTextColor.rgbaString,
       stopColor: this.stopColor.rgbaString,
+      stopBorderColor: this.stopBorderColor.rgbaString,
+      stopTextColor: this.stopTextColor.rgbaString,
+      highlightStartCodons: this.highlightStartCodons,
+      highlightStopCodons: this.highlightStopCodons,
       laneSpacing: this.laneSpacing,
       minimumScale: this.minimumScale,
       visible: this.visible,

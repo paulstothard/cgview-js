@@ -296,6 +296,10 @@ const translationsCheckbox = document.getElementById('zoom-detail-translations')
 const sms3RulerCheckbox = document.getElementById('zoom-detail-ruler');
 const inlineLabelsCheckbox = document.getElementById('zoom-detail-inline-labels');
 const externalLabelsCheckbox = document.getElementById('zoom-detail-external-labels');
+const highlightStartsCheckbox = document.getElementById('zoom-detail-highlight-starts');
+const highlightStopsCheckbox = document.getElementById('zoom-detail-highlight-stops');
+const startColorInput = document.getElementById('zoom-detail-start-color');
+const stopColorInput = document.getElementById('zoom-detail-stop-color');
 const geneticCodeSelect = document.getElementById('zoom-detail-genetic-code');
 const inlineLabelMinFont = document.getElementById('zoom-detail-min-font');
 const zoomDetailButton = document.getElementById('zoom-detail-zoom');
@@ -310,9 +314,19 @@ function syncZoomDetailControls() {
   sms3RulerCheckbox.checked = cgv.ruler.labelPosition === 'outer' && cgv.ruler.labelStyle === 'tangential';
   inlineLabelsCheckbox.checked = cgv.annotation.drawInlineLabels;
   externalLabelsCheckbox.checked = cgv.annotation.drawExternalLabels;
+  highlightStartsCheckbox.checked = cgv.sequence.translation.highlightStartCodons;
+  highlightStopsCheckbox.checked = cgv.sequence.translation.highlightStopCodons;
+  startColorInput.value = `#${cgv.sequence.translation.startColor.hex}`;
+  stopColorInput.value = `#${cgv.sequence.translation.stopColor.hex}`;
   geneticCodeSelect.value = String(cgv.geneticCode);
   inlineLabelMinFont.value = cgv.annotation.inlineLabelMinFontSize;
 }
+
+cgv.on('sequence-translation-update.zoom-detail-controls', () => {
+  if (!cgv.loading) {
+    syncZoomDetailControls();
+  }
+});
 
 translationsCheckbox.addEventListener('change', (e) => {
   cgv.sequence.translation.update({visible: e.target.checked});
@@ -334,6 +348,26 @@ inlineLabelsCheckbox.addEventListener('change', (e) => {
 
 externalLabelsCheckbox.addEventListener('change', (e) => {
   cgv.annotation.update({drawExternalLabels: e.target.checked});
+  cgv.draw();
+});
+
+highlightStartsCheckbox.addEventListener('change', (e) => {
+  cgv.sequence.translation.update({highlightStartCodons: e.target.checked});
+  cgv.draw();
+});
+
+highlightStopsCheckbox.addEventListener('change', (e) => {
+  cgv.sequence.translation.update({highlightStopCodons: e.target.checked});
+  cgv.draw();
+});
+
+startColorInput.addEventListener('input', (e) => {
+  cgv.sequence.translation.update({startColor: e.target.value});
+  cgv.draw();
+});
+
+stopColorInput.addEventListener('input', (e) => {
+  cgv.sequence.translation.update({stopColor: e.target.value});
   cgv.draw();
 });
 

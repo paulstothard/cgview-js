@@ -52,6 +52,14 @@
       "translation": {
         "visible": true,
         "font": "monospace,bold,10",
+        "highlightStartCodons": true,
+        "highlightStopCodons": true,
+        "startColor": "#dcfce7",
+        "startBorderColor": "#16a34a",
+        "startTextColor": "#166534",
+        "stopColor": "#fee2e2",
+        "stopBorderColor": "#b91c1c",
+        "stopTextColor": "#b91c1c",
         "minimumScale": 0.5
       }
     },

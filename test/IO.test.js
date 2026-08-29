@@ -54,6 +54,29 @@ describe('IO', () => {
       expect(() => cgv.draw()).not.toThrow();
     });
 
+    test('loads translation JSON created before highlight controls were added', () => {
+      const json = {
+        cgview: {
+          version: '1.9.0',
+          sequence: {
+            seq: 'ATGTAACCC',
+            translation: {
+              visible: true,
+              startColor: 'green',
+              stopColor: 'red',
+            },
+          },
+        },
+      };
+
+      expect(() => cgv.io.loadJSON(json)).not.toThrow();
+      expect(cgv.sequence.translation.highlightStartCodons).toBe(true);
+      expect(cgv.sequence.translation.highlightStopCodons).toBe(true);
+      expect(cgv.sequence.translation.startColor.rgbaString).toBe('rgba(0,128,0,1)');
+      expect(cgv.sequence.translation.stopColor.rgbaString).toBe('rgba(255,0,0,1)');
+      expect(() => cgv.draw()).not.toThrow();
+    });
+
     test('round trips all zoom-detail settings through CGView JSON', () => {
       const json = {
         cgview: {
@@ -67,7 +90,13 @@ describe('IO', () => {
               color: 'navy',
               backgroundColor: 'rgba(120,120,120,0.2)',
               startColor: 'rgba(0,180,80,0.4)',
+              startBorderColor: 'rgba(0,120,50,1)',
+              startTextColor: 'rgba(0,90,35,1)',
               stopColor: 'rgba(220,40,40,0.4)',
+              stopBorderColor: 'rgba(180,20,20,1)',
+              stopTextColor: 'rgba(140,10,10,1)',
+              highlightStartCodons: false,
+              highlightStopCodons: true,
               laneSpacing: 3,
               minimumScale: 0.6,
             },
@@ -102,6 +131,8 @@ describe('IO', () => {
       expect(secondViewer.ruler.toJSON()).toEqual(cgv.ruler.toJSON());
       expect(secondViewer.annotation.toJSON()).toEqual(cgv.annotation.toJSON());
       expect(secondViewer.sequence.translation.visible).toBe(false);
+      expect(secondViewer.sequence.translation.highlightStartCodons).toBe(false);
+      expect(secondViewer.sequence.translation.highlightStopCodons).toBe(true);
       expect(secondViewer.ruler.labelPosition).toBe('outer');
       expect(secondViewer.ruler.labelStyle).toBe('tangential');
       expect(secondViewer.annotation.drawExternalLabels).toBe(false);
@@ -111,4 +142,3 @@ describe('IO', () => {
   });
 
 });
-

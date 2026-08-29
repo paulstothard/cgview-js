@@ -259,6 +259,8 @@ class Canvas {
    *   [Default: value from settings {@link Settings#showShading}]
    * @param {Boolean} [options.showBorder] - Should the element be drawn with a border
    *   [Default: value from settings {@link Settings#showBorder}]
+   * @param {String} [options.borderColor] - Border color
+   *   [Default: value from settings {@link Settings#borderColor}]
    * @param {Boolean} [options.fast=false] - Fast drawing mode
    * @param {Boolean} [options.selected=false] - Is the element selected
    * @param {Number} [options.minArcLength] - Minimum arc length in pixels
@@ -307,6 +309,7 @@ class Canvas {
       decoration = 'arc',
       showShading = settings.showShading,
       showBorder = settings.showBorder,
+      borderColor = settings.borderColor.rgbaString,
       fast = false,
       selected = false,
       minArcLength = this.viewer.legend.defaultMinArcLength,
@@ -412,7 +415,7 @@ class Canvas {
         // const adjustedBorderWidth = borderWidth;
         ctx.beginPath();
         // ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-        ctx.strokeStyle = settings.borderColor.rgbaString;
+        ctx.strokeStyle = borderColor;
         ctx.lineWidth = borderWidth;
         this.path(layer, centerOffset + halfMainWidth - adjustedBorderWidth, start, stop);
 
@@ -527,7 +530,7 @@ class Canvas {
         // const adjustedBorderWidth = borderWidth;
         ctx.beginPath();
         // ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-        ctx.strokeStyle = settings.borderColor.rgbaString;
+        ctx.strokeStyle = borderColor;
         ctx.lineWidth = borderWidth;
         this.path(layer, centerOffset + halfMainWidth - adjustedBorderWidth, arcStartBp, arcStopBp, direction === -1);
 
@@ -739,4 +742,3 @@ class Canvas {
 }
 
 export default Canvas;
-

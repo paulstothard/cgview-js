@@ -94,10 +94,13 @@ only present when they have non-default values (see the first [feature](#lines.1
 - _visible_ [Default: true]
 - _meta_ [Default: {}].  The _meta_ key is a place to store [user/app-defined meta data](tutorials/details-meta-data.html).
 
-Six-frame translation, tangential ruler labels, and inline feature labels are
-optional. JSON created before these settings were introduced continues to use
-the original defaults: translation hidden, inner horizontal ruler labels, and
-external feature labels. When supplied, the settings are preserved by
+Six-frame translation, genetic-code-aware start/stop highlighting, tangential
+ruler labels, and inline feature labels are optional. JSON created before these
+settings were introduced continues to use the original defaults: translation
+hidden, inner horizontal ruler labels, and external feature labels. Translation
+start and stop highlights default on when translation is configured, and their
+fill, border, and text colors can be styled independently. When supplied, the
+settings are preserved by
 [IO.toJSON](api/IO.html#toJSON) and [IO.loadJSON](api/IO.html#loadJSON).
 
 ```json
@@ -189,7 +192,15 @@ external feature labels. When supplied, the settings are preserved by
             "font": "sans-serif,plain,14",
             "translation": {
                 "visible": true,
-                "font": "monospace,plain,11"
+                "font": "monospace,plain,11",
+                "highlightStartCodons": true,
+                "highlightStopCodons": true,
+                "startColor": "#dcfce7",
+                "startBorderColor": "#16a34a",
+                "startTextColor": "#166534",
+                "stopColor": "#fee2e2",
+                "stopBorderColor": "#b91c1c",
+                "stopTextColor": "#b91c1c"
             },
             "contigs": [
                 {

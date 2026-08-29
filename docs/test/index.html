@@ -148,13 +148,17 @@
             <label><input id='zoom-detail-ruler' type='checkbox' /> SMS3-style ruler</label>
             <label><input id='zoom-detail-inline-labels' type='checkbox' /> Inline feature labels</label>
             <label><input id='zoom-detail-external-labels' type='checkbox' /> External labels</label>
+            <label><input id='zoom-detail-highlight-starts' type='checkbox' /> Highlight start codons</label>
+            <label><input id='zoom-detail-highlight-stops' type='checkbox' /> Highlight stop codons</label>
+            <label class='zoom-detail-color' for='zoom-detail-start-color'>Start fill <input id='zoom-detail-start-color' type='color' /></label>
+            <label class='zoom-detail-color' for='zoom-detail-stop-color'>Stop fill <input id='zoom-detail-stop-color' type='color' /></label>
             <label for='zoom-detail-genetic-code'>Genetic code</label>
             <select id='zoom-detail-genetic-code' class='form-select form-select-sm'></select>
             <label for='zoom-detail-min-font'>Minimum label font</label>
             <input id='zoom-detail-min-font' class='form-control form-control-sm' type='number' min='6' max='16' step='1' />
           </div>
           <button id='zoom-detail-zoom' type='button' class='btn btn-sm btn-outline-success'>Zoom to base-pair detail</button>
-          <div class='zoom-detail-help'>Direct frames +1 to +3 draw outward; reverse frames −1 to −3 draw inward. Green and red codon cells mark starts and stops.</div>
+          <div class='zoom-detail-help'>Direct frames +1 to +3 draw outward; reverse frames −1 to −3 draw inward. Start and stop cells use separate SMS3-inspired fill, border, and text colors.</div>
           <hr />
         </div>
         <div class='section-labels'>

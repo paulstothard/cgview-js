@@ -87,6 +87,18 @@ hr {
 .zoom-detail-grid label {
   margin: 0;
 }
+.zoom-detail-color {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.zoom-detail-color input {
+  width: 42px;
+  height: 24px;
+  padding: 1px;
+  border: 1px solid #ced4da;
+  border-radius: 3px;
+}
 #zoom-detail-zoom {
   display: block;
   margin: 8px auto 0;

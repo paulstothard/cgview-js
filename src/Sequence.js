@@ -968,6 +968,9 @@ class Sequence extends CGObject {
     this.update({
       color: this.color.invert().rgbaString
     });
+    if (this.translation.visible || this.translation._configured) {
+      this.translation.invertColors();
+    }
   }
 
   /**
