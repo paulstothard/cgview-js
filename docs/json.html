@@ -94,6 +94,12 @@ only present when they have non-default values (see the first [feature](#lines.1
 - _visible_ [Default: true]
 - _meta_ [Default: {}].  The _meta_ key is a place to store [user/app-defined meta data](tutorials/details-meta-data.html).
 
+Six-frame translation, tangential ruler labels, and inline feature labels are
+optional. JSON created before these settings were introduced continues to use
+the original defaults: translation hidden, inner horizontal ruler labels, and
+external feature labels. When supplied, the settings are preserved by
+[IO.toJSON](api/IO.html#toJSON) and [IO.loadJSON](api/IO.html#loadJSON).
+
 ```json
 {
     "cgview": {

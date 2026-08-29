@@ -33,8 +33,82 @@ describe('IO', () => {
       expect( () => cgv.io.loadJSON(json) ).toThrow("No 'cgview' property found in JSON.");;
     });
 
+    test('loads legacy JSON without zoom-detail settings using legacy defaults', () => {
+      const json = {
+        cgview: {
+          version: '1.7.0',
+          settings: {geneticCode: 11},
+          sequence: {seq: 'ATGAAATAACCC'},
+          ruler: {color: 'black'},
+          annotation: {font: 'sans-serif,plain,12'},
+        },
+      };
+
+      expect(() => cgv.io.loadJSON(json)).not.toThrow();
+      expect(cgv.sequence.translation.visible).toBe(false);
+      expect(cgv.ruler.labelPosition).toBe('inner');
+      expect(cgv.ruler.labelStyle).toBe('default');
+      expect(cgv.annotation.drawExternalLabels).toBe(true);
+      expect(cgv.annotation.drawInlineLabels).toBe(false);
+      expect(cgv.io.toJSON().cgview.sequence.translation).toBeUndefined();
+      expect(() => cgv.draw()).not.toThrow();
+    });
+
+    test('round trips all zoom-detail settings through CGView JSON', () => {
+      const json = {
+        cgview: {
+          version: '1.9.0',
+          settings: {geneticCode: 2},
+          sequence: {
+            seq: 'ATGAAATAACCC',
+            translation: {
+              visible: false,
+              font: 'monospace,bold,10',
+              color: 'navy',
+              backgroundColor: 'rgba(120,120,120,0.2)',
+              startColor: 'rgba(0,180,80,0.4)',
+              stopColor: 'rgba(220,40,40,0.4)',
+              laneSpacing: 3,
+              minimumScale: 0.6,
+            },
+          },
+          ruler: {
+            labelPosition: 'outer',
+            labelStyle: 'tangential',
+            tickCount: 12,
+            tickWidth: 2,
+            tickLength: 6,
+            rulerPadding: 11,
+            spacing: 4,
+          },
+          annotation: {
+            drawExternalLabels: false,
+            drawInlineLabels: true,
+            inlineLabelMinZoomFactor: 3,
+            inlineLabelMinFontSize: 7,
+            inlineLabelPadding: 4,
+            inlineLabelColor: 'white',
+          },
+        },
+      };
+
+      cgv.io.loadJSON(json);
+      const exported = cgv.io.toJSON();
+      const secondViewer = new Viewer('#map');
+      secondViewer.io.loadJSON(exported);
+
+      expect(secondViewer.geneticCode).toBe(2);
+      expect(secondViewer.sequence.translation.toJSON()).toEqual(cgv.sequence.translation.toJSON());
+      expect(secondViewer.ruler.toJSON()).toEqual(cgv.ruler.toJSON());
+      expect(secondViewer.annotation.toJSON()).toEqual(cgv.annotation.toJSON());
+      expect(secondViewer.sequence.translation.visible).toBe(false);
+      expect(secondViewer.ruler.labelPosition).toBe('outer');
+      expect(secondViewer.ruler.labelStyle).toBe('tangential');
+      expect(secondViewer.annotation.drawExternalLabels).toBe(false);
+      expect(secondViewer.annotation.drawInlineLabels).toBe(true);
+    });
+
   });
 
 });
-
 
