@@ -1,4 +1,5 @@
 import Viewer from '../src/Viewer';
+import CGRange from '../src/CGRange';
 
 describe('Feature', () => {
 
@@ -129,6 +130,84 @@ describe('Feature', () => {
 
   });
 
+  describe('visible-range clipping', () => {
+
+    let viewer;
+
+    beforeEach(() => {
+      viewer = new Viewer('#map', {
+        sequence: {length: 360},
+        legend: {items: [
+          {name: 'Replication', swatchColor: 'blue', decoration: 'arrow'},
+          {name: 'Regulation', swatchColor: 'orange', decoration: 'arrow'},
+        ]},
+      });
+    });
+
+    test('never extends a feature beyond its real coordinates for a wrapped viewport', () => {
+      const feature = viewer.addFeatures([
+        {name: 'DNA polymerase', start: 12, stop: 104, strand: 1, legend: 'Replication'},
+      ])[0];
+      const visibleRange = new CGRange(viewer.sequence.mapContig, 350, 60);
+      const drawElement = jest.spyOn(viewer.canvas, 'drawElement').mockImplementation(() => {});
+
+      feature.drawRange(feature.mapRange, 'map', 100, 20, visibleRange);
+
+      expect(drawElement).toHaveBeenCalledTimes(1);
+      expect(drawElement).toHaveBeenCalledWith(expect.objectContaining({
+        start: 12,
+        stop: 104,
+        color: feature.color.rgbaString,
+        decoration: 'clockwise-arrow',
+      }));
+    });
+
+    test('splits wrapped visibility into bounded linear feature segments', () => {
+      const feature = viewer.addFeatures([
+        {name: 'long regulator', start: 10, stop: 350, strand: 1, legend: 'Regulation'},
+      ])[0];
+      const visibleRange = new CGRange(viewer.sequence.mapContig, 350, 60);
+
+      expect(feature._drawSegmentsForRange(feature.mapRange, visibleRange)).toEqual([
+        [10, 160],
+        [250, 350],
+      ]);
+    });
+
+    test('uses arcs at clipping boundaries and keeps the arrow at the true endpoint', () => {
+      const feature = viewer.addFeatures([
+        {name: 'long regulator', start: 10, stop: 350, strand: 1, legend: 'Regulation'},
+      ])[0];
+      const visibleRange = new CGRange(viewer.sequence.mapContig, 350, 60);
+      const drawElement = jest.spyOn(viewer.canvas, 'drawElement').mockImplementation(() => {});
+
+      feature.drawRange(feature.mapRange, 'map', 100, 20, visibleRange);
+
+      expect(drawElement.mock.calls.map(call => ({
+        start: call[0].start,
+        stop: call[0].stop,
+        decoration: call[0].decoration,
+      }))).toEqual([
+        {start: 10, stop: 160, decoration: 'arc'},
+        {start: 250, stop: 350, decoration: 'clockwise-arrow'},
+      ]);
+    });
+
+    test('keeps a reverse arrow only on the segment containing the true start', () => {
+      const feature = viewer.addFeatures([
+        {name: 'reverse regulator', start: 10, stop: 350, strand: -1, legend: 'Regulation'},
+      ])[0];
+      const visibleRange = new CGRange(viewer.sequence.mapContig, 350, 60);
+      const drawElement = jest.spyOn(viewer.canvas, 'drawElement').mockImplementation(() => {});
+
+      feature.drawRange(feature.mapRange, 'map', 100, 20, visibleRange);
+
+      expect(drawElement.mock.calls.map(call => call[0].decoration)).toEqual([
+        'counterclockwise-arrow',
+        'arc',
+      ]);
+    });
+
+  });
+
 });
-
-
