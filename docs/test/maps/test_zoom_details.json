@@ -27,6 +27,8 @@
       "font": "sans-serif,bold,13",
       "drawExternalLabels": false,
       "drawInlineLabels": true,
+      "inlineLabelAllowShrinking": true,
+      "inlineLabelAllowTruncation": false,
       "inlineLabelMinZoomFactor": 1,
       "inlineLabelMinFontSize": 8,
       "inlineLabelPadding": 2,
@@ -65,8 +67,9 @@
     },
     "features": [
       {"name": "DNA polymerase", "type": "CDS", "start": 12, "stop": 104, "strand": 1, "source": "zoom-detail", "legend": "Replication"},
-      {"name": "small regulator", "type": "CDS", "start": 112, "stop": 178, "strand": 1, "source": "zoom-detail", "legend": "Regulation"},
+      {"name": "putative small transcriptional regulator", "type": "CDS", "start": 112, "stop": 178, "strand": 1, "source": "zoom-detail", "legend": "Regulation"},
       {"name": "membrane transporter alpha", "type": "CDS", "start": 190, "stop": 322, "strand": 1, "source": "zoom-detail", "legend": "Transport"},
+      {"name": "small DNA-binding protein gamma", "type": "CDS", "start": 326, "stop": 352, "strand": 1, "source": "zoom-detail", "legend": "Regulation"},
       {"name": "reverse helicase", "type": "CDS", "start": 36, "stop": 158, "strand": -1, "source": "zoom-detail", "legend": "Replication"},
       {"name": "ATPase beta", "type": "CDS", "start": 210, "stop": 347, "strand": -1, "source": "zoom-detail", "legend": "Transport"}
     ],

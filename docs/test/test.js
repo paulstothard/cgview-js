@@ -294,8 +294,9 @@ clearBtn.addEventListener('click', (e) => {
 
 const translationsCheckbox = document.getElementById('zoom-detail-translations');
 const tangentialRulerCheckbox = document.getElementById('zoom-detail-ruler');
-const inlineLabelsCheckbox = document.getElementById('zoom-detail-inline-labels');
-const externalLabelsCheckbox = document.getElementById('zoom-detail-external-labels');
+const featureLabelModeSelect = document.getElementById('zoom-detail-label-mode');
+const shrinkInlineLabelsCheckbox = document.getElementById('zoom-detail-label-shrink');
+const truncateInlineLabelsCheckbox = document.getElementById('zoom-detail-label-truncate');
 const highlightStartsCheckbox = document.getElementById('zoom-detail-highlight-starts');
 const highlightStopsCheckbox = document.getElementById('zoom-detail-highlight-stops');
 const startColorInput = document.getElementById('zoom-detail-start-color');
@@ -309,20 +310,37 @@ const geneticCodeOptions = Object.entries(cgv.codonTables.names()).map(([id, nam
 );
 geneticCodeSelect.innerHTML = geneticCodeOptions.join('\n');
 
+function featureLabelMode() {
+  if (cgv.annotation.drawInlineLabels && cgv.annotation.drawExternalLabels) return 'mixed';
+  if (cgv.annotation.drawInlineLabels) return 'inline';
+  if (cgv.annotation.drawExternalLabels) return 'external';
+  return 'none';
+}
+
 function syncZoomDetailControls() {
   translationsCheckbox.checked = cgv.sequence.translation.visible;
   tangentialRulerCheckbox.checked = cgv.ruler.labelPosition === 'outer' && cgv.ruler.labelStyle === 'tangential';
-  inlineLabelsCheckbox.checked = cgv.annotation.drawInlineLabels;
-  externalLabelsCheckbox.checked = cgv.annotation.drawExternalLabels;
+  featureLabelModeSelect.value = featureLabelMode();
+  shrinkInlineLabelsCheckbox.checked = cgv.annotation.inlineLabelAllowShrinking;
+  truncateInlineLabelsCheckbox.checked = cgv.annotation.inlineLabelAllowTruncation;
   highlightStartsCheckbox.checked = cgv.sequence.translation.highlightStartCodons;
   highlightStopsCheckbox.checked = cgv.sequence.translation.highlightStopCodons;
   startColorInput.value = `#${cgv.sequence.translation.startColor.hex}`;
   stopColorInput.value = `#${cgv.sequence.translation.stopColor.hex}`;
   geneticCodeSelect.value = String(cgv.geneticCode);
   inlineLabelMinFont.value = cgv.annotation.inlineLabelMinFontSize;
+  inlineLabelMinFont.disabled = !cgv.annotation.drawInlineLabels || !cgv.annotation.inlineLabelAllowShrinking;
+  shrinkInlineLabelsCheckbox.disabled = !cgv.annotation.drawInlineLabels;
+  truncateInlineLabelsCheckbox.disabled = !cgv.annotation.drawInlineLabels;
 }
 
 cgv.on('sequence-translation-update.zoom-detail-controls', () => {
+  if (!cgv.loading) {
+    syncZoomDetailControls();
+  }
+});
+
+cgv.on('annotation-update.zoom-detail-controls', () => {
   if (!cgv.loading) {
     syncZoomDetailControls();
   }
@@ -341,13 +359,22 @@ tangentialRulerCheckbox.addEventListener('change', (e) => {
   cgv.draw();
 });
 
-inlineLabelsCheckbox.addEventListener('change', (e) => {
-  cgv.annotation.update({drawInlineLabels: e.target.checked});
+featureLabelModeSelect.addEventListener('change', (e) => {
+  const mode = e.target.value;
+  cgv.annotation.update({
+    drawInlineLabels: mode === 'inline' || mode === 'mixed',
+    drawExternalLabels: mode === 'external' || mode === 'mixed',
+  });
   cgv.draw();
 });
 
-externalLabelsCheckbox.addEventListener('change', (e) => {
-  cgv.annotation.update({drawExternalLabels: e.target.checked});
+shrinkInlineLabelsCheckbox.addEventListener('change', (e) => {
+  cgv.annotation.update({inlineLabelAllowShrinking: e.target.checked});
+  cgv.draw();
+});
+
+truncateInlineLabelsCheckbox.addEventListener('change', (e) => {
+  cgv.annotation.update({inlineLabelAllowTruncation: e.target.checked});
   cgv.draw();
 });
 

@@ -50,6 +50,8 @@ describe('IO', () => {
       expect(cgv.ruler.labelStyle).toBe('default');
       expect(cgv.annotation.drawExternalLabels).toBe(true);
       expect(cgv.annotation.drawInlineLabels).toBe(false);
+      expect(cgv.annotation.inlineLabelAllowShrinking).toBe(true);
+      expect(cgv.annotation.inlineLabelAllowTruncation).toBe(false);
       expect(cgv.annotation.inlineLabelMinZoomFactor).toBe(1);
       expect(cgv.io.toJSON().cgview.sequence.translation).toBeUndefined();
       expect(() => cgv.draw()).not.toThrow();
@@ -114,6 +116,8 @@ describe('IO', () => {
           annotation: {
             drawExternalLabels: false,
             drawInlineLabels: true,
+            inlineLabelAllowShrinking: false,
+            inlineLabelAllowTruncation: true,
             inlineLabelMinZoomFactor: 3,
             inlineLabelMinFontSize: 7,
             inlineLabelPadding: 4,
@@ -138,6 +142,8 @@ describe('IO', () => {
       expect(secondViewer.ruler.labelStyle).toBe('tangential');
       expect(secondViewer.annotation.drawExternalLabels).toBe(false);
       expect(secondViewer.annotation.drawInlineLabels).toBe(true);
+      expect(secondViewer.annotation.inlineLabelAllowShrinking).toBe(false);
+      expect(secondViewer.annotation.inlineLabelAllowTruncation).toBe(true);
     });
 
   });

@@ -106,7 +106,7 @@ describe('Zoom detail options', () => {
     cgv.annotation._featureLabelRenderer.draw([feature], 150, 24, visibleRange);
 
     expect(ctx.fillText.mock.calls.map(call => call[0])).toEqual(Array.from(feature.name));
-    expect(ctx.measureText).toHaveBeenCalledTimes(Array.from(feature.name).length);
+    expect(ctx.measureText).toHaveBeenCalledTimes(Array.from(feature.name).length + 1);
     expect(ctx.rotate).toHaveBeenCalledTimes(Array.from(feature.name).length);
     expect(new Set(ctx.rotate.mock.calls.map(call => call[0])).size).toBeGreaterThan(1);
 
@@ -154,6 +154,84 @@ describe('Zoom detail options', () => {
     expect(cgv.annotation._featureLabelRenderer.metricsFor(feature, cgv.backbone.adjustedCenterOffset, 20, visibleRange)).toBeUndefined();
   });
 
+  test('does not shrink inline labels when shrinking is disabled', () => {
+    const cgv = new Viewer('#map', {
+      sequence: {length: 1000},
+      annotation: {
+        font: 'sans-serif, plain, 16',
+        drawInlineLabels: true,
+        inlineLabelAllowShrinking: false,
+        inlineLabelAllowTruncation: false,
+        inlineLabelMinFontSize: 8,
+      },
+      legend: {items: [{name: 'Feature', decoration: 'arc'}]},
+      features: [{name: 'label requiring shrink', source: 'test', start: 100, stop: 300, legend: 'Feature'}],
+    });
+    const feature = cgv.features(1);
+    const visibleRange = new CGRange(cgv.sequence.mapContig, 1, 400);
+    const targetWidth = feature.label.width * 0.75;
+    jest.spyOn(cgv.canvas, 'pixelsPerBp').mockReturnValue((targetWidth + 4) / feature.length);
+
+    const renderer = cgv.annotation._featureLabelRenderer;
+    expect(renderer.metricsFor(feature, 100, 20, visibleRange)).toBeUndefined();
+
+    cgv.annotation.update({inlineLabelAllowShrinking: true});
+    const metrics = renderer.metricsFor(feature, 100, 20, visibleRange);
+    expect(metrics).toBeDefined();
+    expect(metrics.fontSize).toBeLessThan(feature.label.font.size);
+  });
+
+  test('truncates inline labels with an ellipsis only when enabled', () => {
+    const cgv = new Viewer('#map', {
+      sequence: {length: 1000},
+      annotation: {
+        font: 'sans-serif, plain, 14',
+        drawInlineLabels: true,
+        inlineLabelAllowShrinking: false,
+        inlineLabelAllowTruncation: true,
+      },
+      legend: {items: [{name: 'Feature', decoration: 'arc'}]},
+      features: [{name: 'long descriptive feature label', source: 'test', start: 100, stop: 300, legend: 'Feature'}],
+    });
+    const feature = cgv.features(1);
+    const renderer = cgv.annotation._featureLabelRenderer;
+    const measurement = renderer._measurementFor(feature);
+    const targetWidth = measurement.prefixWidths[8] + measurement.ellipsisWidth;
+    const visibleRange = new CGRange(cgv.sequence.mapContig, 1, 400);
+    jest.spyOn(cgv.canvas, 'pixelsPerBp').mockReturnValue((targetWidth + 4) / feature.length);
+
+    const metrics = renderer.metricsFor(feature, 100, 20, visibleRange);
+    expect(metrics).toBeDefined();
+    expect(metrics.text.endsWith('…')).toBe(true);
+    expect(metrics.text).not.toBe(feature.name);
+    expect(metrics.fontSize).toBe(feature.label.font.size);
+
+    cgv.annotation.update({inlineLabelAllowTruncation: false});
+    expect(renderer.metricsFor(feature, 100, 20, visibleRange)).toBeUndefined();
+  });
+
+  test('uses external labels only as fallbacks when inline and external labels are enabled', () => {
+    const cgv = new Viewer('#map', {
+      width: 800,
+      height: 600,
+      sequence: {length: 1000},
+      annotation: {drawExternalLabels: true, drawInlineLabels: true},
+      features: [
+        {name: 'fits inline', source: 'test', start: 100, stop: 300, legend: 'Feature'},
+        {name: 'needs fallback', source: 'test', start: 500, stop: 600, legend: 'Feature'},
+      ],
+    });
+    cgv.addTracks([{dataType: 'feature', dataMethod: 'source', dataKeys: 'test', position: 'outside'}]);
+    const renderer = cgv.annotation._featureLabelRenderer;
+    jest.spyOn(renderer, 'willDrawFeature').mockImplementation(feature => feature.name === 'fits inline');
+    jest.spyOn(cgv.canvas, 'visibleRangeForCenterOffset').mockReturnValue(new CGRange(cgv.sequence.mapContig, 1, 1000));
+
+    cgv.annotation.draw(100, 150, false);
+
+    expect(cgv.annotation._visibleLabels.map(label => label.feature.name)).toContain('needs fallback');
+    expect(cgv.annotation._visibleLabels.map(label => label.feature.name)).not.toContain('fits inline');
+  });
+
   test('rejects obviously short overview features before segment layout work', () => {
     const cgv = new Viewer('#map', {
       sequence: {length: 1000000},
@@ -186,13 +264,21 @@ describe('Zoom detail options', () => {
     expect(metrics.bp).toBeCloseTo(1000);
   });
 
-  test('serializes independent external and inline label switches', () => {
+  test('serializes independent placement and inline fitting switches', () => {
     const cgv = new Viewer('#map', {
-      annotation: {drawExternalLabels: false, drawInlineLabels: true, inlineLabelPadding: 3},
+      annotation: {
+        drawExternalLabels: false,
+        drawInlineLabels: true,
+        inlineLabelAllowShrinking: false,
+        inlineLabelAllowTruncation: true,
+        inlineLabelPadding: 3,
+      },
     });
     const json = cgv.annotation.toJSON();
     expect(json.drawExternalLabels).toBe(false);
     expect(json.drawInlineLabels).toBe(true);
+    expect(json.inlineLabelAllowShrinking).toBe(false);
+    expect(json.inlineLabelAllowTruncation).toBe(true);
     expect(json.inlineLabelPadding).toBe(3);
   });
 });

@@ -21,6 +21,9 @@
 
 import Color from './Color';
 
+const ELLIPSIS = '…';
+const MIN_TRUNCATED_CHARACTERS = 3;
+
 /**
  * Fits and draws feature names inside their rendered feature arcs. This class
  * owns geometry only; public configuration remains on Annotation.
@@ -103,14 +106,95 @@ class FeatureLabelRenderer {
     return new Color(luminance > 150 ? 'rgba(0,0,0,0.86)' : 'rgba(255,255,255,0.96)');
   }
 
-  _fontSizeThatFits(feature, availableWidth, availableHeight) {
+  _measurementFor(feature) {
+    const ctx = this.canvas.context('map');
+    const label = feature.label;
     const font = feature.label.font;
-    const maximumSize = Math.floor(Math.min(font.size, availableHeight));
-    const minimumSize = this.annotation.inlineLabelMinFontSize;
-    if (maximumSize < minimumSize || !feature.label.width) { return; }
-    const widthLimitedSize = Math.floor(font.size * availableWidth / feature.label.width);
-    const size = Math.min(maximumSize, widthLimitedSize);
-    return size >= minimumSize ? size : undefined;
+    const cacheKey = `${font.css}\n${feature.name}`;
+    let cached = this._glyphWidthCache.get(label);
+    if (!cached || cached.key !== cacheKey) {
+      ctx.font = font.css;
+      const characters = Array.from(feature.name);
+      const widths = characters.map(character => Math.max(1, ctx.measureText(character).width));
+      const prefixWidths = [0];
+      for (const width of widths) {
+        prefixWidths.push(prefixWidths[prefixWidths.length - 1] + width);
+      }
+      cached = {
+        key: cacheKey,
+        characters,
+        widths,
+        prefixWidths,
+        curvedWidth: prefixWidths[prefixWidths.length - 1],
+        linearWidth: label.width || ctx.measureText(feature.name).width,
+        ellipsisWidth: Math.max(1, ctx.measureText(ELLIPSIS).width),
+      };
+      this._glyphWidthCache.set(label, cached);
+    }
+    return cached;
+  }
+
+  _fullBaseWidth(measurement) {
+    return this.viewer.format === 'circular' ? measurement.curvedWidth : measurement.linearWidth;
+  }
+
+  _minimumBaseWidth(measurement) {
+    const fullWidth = this._fullBaseWidth(measurement);
+    if (!this.annotation.inlineLabelAllowTruncation || measurement.characters.length <= MIN_TRUNCATED_CHARACTERS) {
+      return fullWidth;
+    }
+    const truncatedWidth = measurement.prefixWidths[MIN_TRUNCATED_CHARACTERS] + measurement.ellipsisWidth;
+    return Math.min(fullWidth, truncatedWidth);
+  }
+
+  _textPlan(feature, availableWidth, availableHeight, measurement) {
+    const annotation = this.annotation;
+    const font = feature.label.font;
+    const allowShrinking = annotation.inlineLabelAllowShrinking;
+    const naturalSize = font.size;
+    const maximumSize = allowShrinking ? Math.floor(Math.min(naturalSize, availableHeight)) : naturalSize;
+    const minimumSize = allowShrinking ? Math.min(naturalSize, annotation.inlineLabelMinFontSize) : naturalSize;
+    if (maximumSize < minimumSize || (!allowShrinking && availableHeight < naturalSize)) { return; }
+
+    const fullBaseWidth = this._fullBaseWidth(measurement);
+    const maximumScale = maximumSize / naturalSize;
+    if ((fullBaseWidth * maximumScale) <= availableWidth) {
+      return {
+        text: feature.name,
+        fontSize: maximumSize,
+        characters: measurement.characters,
+        widths: measurement.widths,
+      };
+    }
+
+    if (allowShrinking) {
+      const fittedSize = Math.min(maximumSize, Math.floor(naturalSize * availableWidth / fullBaseWidth));
+      if (fittedSize >= minimumSize) {
+        return {
+          text: feature.name,
+          fontSize: fittedSize,
+          characters: measurement.characters,
+          widths: measurement.widths,
+        };
+      }
+    }
+
+    if (!annotation.inlineLabelAllowTruncation || measurement.characters.length <= MIN_TRUNCATED_CHARACTERS) { return; }
+    const fontSize = allowShrinking ? minimumSize : naturalSize;
+    const maximumBaseWidth = availableWidth * naturalSize / fontSize;
+    let characterCount = measurement.characters.length - 1;
+    while (characterCount >= MIN_TRUNCATED_CHARACTERS &&
+      (measurement.prefixWidths[characterCount] + measurement.ellipsisWidth) > maximumBaseWidth) {
+      characterCount -= 1;
+    }
+    if (characterCount < MIN_TRUNCATED_CHARACTERS) { return; }
+    return {
+      text: `${measurement.characters.slice(0, characterCount).join('')}${ELLIPSIS}`,
+      fontSize,
+      characters: measurement.characters.slice(0, characterCount).concat(ELLIPSIS),
+      widths: measurement.widths.slice(0, characterCount).concat(measurement.ellipsisWidth),
+      truncated: true,
+    };
   }
 
   metricsFor(feature, centerOffset, slotThickness, visibleRange) {
@@ -123,13 +207,22 @@ class FeatureLabelRenderer {
     const adjustedWidth = feature.adjustedWidth(slotThickness);
     const padding = annotation.inlineLabelPadding;
     const availableHeight = adjustedWidth - (padding * 2);
-    if (availableHeight < annotation.inlineLabelMinFontSize) { return; }
+    const font = feature.label.font;
+    const minimumFontSize = annotation.inlineLabelAllowShrinking ? Math.min(font.size, annotation.inlineLabelMinFontSize) : font.size;
+    if (availableHeight < minimumFontSize) { return; }
 
     const pixelsPerBp = this.canvas.pixelsPerBp(adjustedCenterOffset);
-    const minimumTextWidth = feature.label.width * annotation.inlineLabelMinFontSize / feature.label.font.size;
+    let measurement;
+    let minimumBaseWidth = feature.label.width;
+    if (annotation.inlineLabelAllowTruncation) {
+      measurement = this._measurementFor(feature);
+      minimumBaseWidth = this._minimumBaseWidth(measurement);
+    }
+    const minimumTextWidth = minimumBaseWidth * minimumFontSize / font.size;
     const maximumFeatureWidth = (feature.length * pixelsPerBp) - (padding * 2);
     if (maximumFeatureWidth < minimumTextWidth) { return; }
 
+    measurement ||= this._measurementFor(feature);
     const segments = this._visibleSegments(feature, visibleRange).sort((a, b) => b.length - a.length);
     for (const segment of segments) {
       let availableWidth = (segment.length * pixelsPerBp) - (padding * 2);
@@ -138,8 +231,8 @@ class FeatureLabelRenderer {
         availableWidth -= adjustedWidth * this.viewer.settings.arrowHeadLength;
       }
       if (availableWidth <= 0) { continue; }
-      const fontSize = this._fontSizeThatFits(feature, availableWidth, availableHeight);
-      if (fontSize) {
+      const textPlan = this._textPlan(feature, availableWidth, availableHeight, measurement);
+      if (textPlan) {
         let bp = segment.start - 0.5 + (segment.length / 2);
         if (bp > this.viewer.sequence.length) {
           bp -= this.viewer.sequence.length;
@@ -147,7 +240,7 @@ class FeatureLabelRenderer {
         return {
           bp,
           centerOffset: adjustedCenterOffset,
-          fontSize,
+          ...textPlan,
           availableWidth,
           pixelsPerBp,
           color: this._labelColor(feature),
@@ -164,35 +257,12 @@ class FeatureLabelRenderer {
   }
 
   _glyphPlan(ctx, feature, metrics) {
-    const label = feature.label;
     const font = feature.label.font;
-    const cacheKey = `${font.css}\n${feature.name}`;
-    let cached = this._glyphWidthCache.get(label);
-    if (!cached || cached.key !== cacheKey) {
-      ctx.font = font.css;
-      const characters = Array.from(feature.name);
-      const widths = characters.map(character => Math.max(1, ctx.measureText(character).width));
-      cached = {
-        key: cacheKey,
-        characters,
-        widths,
-        totalWidth: widths.reduce((sum, width) => sum + width, 0),
-      };
-      this._glyphWidthCache.set(label, cached);
-    }
-
-    let fontSize = metrics.fontSize;
-    let scale = fontSize / font.size;
-    let totalWidth = cached.totalWidth * scale;
-    if (totalWidth > metrics.availableWidth) {
-      fontSize = Math.floor(fontSize * metrics.availableWidth / totalWidth);
-      if (fontSize < this.annotation.inlineLabelMinFontSize) { return; }
-      scale = fontSize / font.size;
-      totalWidth = cached.totalWidth * scale;
-    }
-    if (totalWidth > metrics.availableWidth) { return; }
+    const scale = metrics.fontSize / font.size;
+    const totalWidth = metrics.widths.reduce((sum, width) => sum + width, 0) * scale;
+    if (totalWidth > (metrics.availableWidth + 0.01)) { return; }
     ctx.font = font.cssScaled(scale);
-    return {characters: cached.characters, widths: cached.widths, totalWidth, scale};
+    return {characters: metrics.characters, widths: metrics.widths, totalWidth, scale};
   }
 
   _drawStraightLabel(ctx, feature, metrics) {
@@ -203,8 +273,8 @@ class FeatureLabelRenderer {
     ctx.font = font.cssScaled(metrics.fontSize / font.size);
     ctx.fillStyle = metrics.color.rgbaString;
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillText(feature.name, 0, metrics.fontSize * 0.35);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(metrics.text, 0, 0);
     ctx.restore();
   }
 
@@ -247,6 +317,23 @@ class FeatureLabelRenderer {
       }
     }
     ctx.restore();
+  }
+
+  /**
+   * Return true when a feature will receive an inline label in any visible
+   * slot. Used to make external labels fallbacks instead of duplicates.
+   * @private
+   */
+  willDrawFeature(feature) {
+    if (!this.annotation.drawInlineLabels) { return false; }
+    for (const slot of feature.slots()) {
+      if (!slot.visible || !slot.track.visible || slot.thickness <= 0) { continue; }
+      const visibleRange = this.canvas.visibleRangeForCenterOffset(slot.centerOffset, {margin: slot.thickness});
+      if (this.metricsFor(feature, slot.centerOffset, slot.thickness, visibleRange)) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 
