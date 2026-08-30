@@ -42,6 +42,12 @@ const AMINO_ACID_NAMES = {
   '*': 'Stop', X: 'Unknown',
 };
 
+// Translation cells need enough room for both the nominal font box and their
+// inset border. Keeping these values in unscaled screen pixels makes the cell,
+// lane, and glyph proportions remain stable through the detail transition.
+const HIGHLIGHT_VERTICAL_PADDING = 2.5;
+const LANE_VERTICAL_PADDING = 3.5;
+
 /**
  * SequenceTranslation draws all six reading frames around the sequence when
  * enough base-pair detail is visible. Direct frames are drawn outside the
@@ -209,7 +215,7 @@ class SequenceTranslation extends CGObject {
   }
 
   get laneHeight() {
-    return this.font.height + 4;
+    return this.font.height + (2 * LANE_VERTICAL_PADDING);
   }
 
   /**
@@ -283,13 +289,15 @@ class SequenceTranslation extends CGObject {
    * @private
    */
   _layoutForScale(scaleFactor) {
-    const highlightPadding = 0.75 * scaleFactor;
+    const highlightPadding = HIGHLIGHT_VERTICAL_PADDING * scaleFactor;
     const laneHeight = this.laneHeight * scaleFactor;
     const laneSpacing = this.laneSpacing * scaleFactor;
     const edgePadding = this.edgePadding * scaleFactor;
-    // Highlight cells hug the scaled glyph box instead of filling the lane.
-    // Their border uses the same detail scale, so the visual proportions do
-    // not change while zooming through the sequence-detail transition.
+    // The highlight border is inset into the cell. The larger padding leaves
+    // clear space between that border and the nominal glyph box, while the
+    // lane retains a separate one-pixel gutter around the complete cell.
+    // Every value uses the same detail scale so these proportions do not
+    // change while zooming through the sequence-detail transition.
     const highlightHeight = (this.font.height * scaleFactor) + (2 * highlightPadding);
     const highlightBorderWidth = scaleFactor;
     const laneStep = laneHeight + laneSpacing;

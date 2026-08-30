@@ -101,7 +101,13 @@ describe('SequenceTranslation', () => {
       expect(firstInnerEdge - (cgv.sequence.baseThickness * scaleFactor / 2)).toBeCloseTo(layout.edgePadding);
       expect(layout.laneStep - layout.laneHeight).toBeCloseTo(layout.laneSpacing);
       expect(trailingEdgeGap).toBeCloseTo(layout.edgePadding);
-      expect((layout.laneHeight - layout.highlightHeight) / 2).toBeCloseTo(1.25 * scaleFactor);
+      expect((layout.laneHeight - layout.highlightHeight) / 2).toBeCloseTo(scaleFactor);
+      expect((layout.highlightHeight - (translation.font.height * scaleFactor)) / 2)
+        .toBeCloseTo(2.5 * scaleFactor);
+      expect(
+        ((layout.highlightHeight - (translation.font.height * scaleFactor)) / 2) -
+        layout.highlightBorderWidth
+      ).toBeCloseTo(1.5 * scaleFactor);
       expect(layout.highlightBorderWidth).toBeCloseTo(scaleFactor);
     }
     expect(translation.strandThickness).toBe(
