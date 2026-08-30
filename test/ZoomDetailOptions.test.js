@@ -9,7 +9,7 @@ describe('Zoom detail options', () => {
     document.body.innerHTML = '<div id="map"></div>';
   });
 
-  test('serializes and updates the SMS3-style ruler configuration', () => {
+  test('serializes and updates the outer tangential ruler configuration', () => {
     const cgv = new Viewer('#map', {
       ruler: {labelPosition: 'outer', labelStyle: 'tangential'},
     });

@@ -293,7 +293,7 @@ clearBtn.addEventListener('click', (e) => {
 ///////////////////////////////////////////////////////////////////////////////
 
 const translationsCheckbox = document.getElementById('zoom-detail-translations');
-const sms3RulerCheckbox = document.getElementById('zoom-detail-ruler');
+const tangentialRulerCheckbox = document.getElementById('zoom-detail-ruler');
 const inlineLabelsCheckbox = document.getElementById('zoom-detail-inline-labels');
 const externalLabelsCheckbox = document.getElementById('zoom-detail-external-labels');
 const highlightStartsCheckbox = document.getElementById('zoom-detail-highlight-starts');
@@ -311,7 +311,7 @@ geneticCodeSelect.innerHTML = geneticCodeOptions.join('\n');
 
 function syncZoomDetailControls() {
   translationsCheckbox.checked = cgv.sequence.translation.visible;
-  sms3RulerCheckbox.checked = cgv.ruler.labelPosition === 'outer' && cgv.ruler.labelStyle === 'tangential';
+  tangentialRulerCheckbox.checked = cgv.ruler.labelPosition === 'outer' && cgv.ruler.labelStyle === 'tangential';
   inlineLabelsCheckbox.checked = cgv.annotation.drawInlineLabels;
   externalLabelsCheckbox.checked = cgv.annotation.drawExternalLabels;
   highlightStartsCheckbox.checked = cgv.sequence.translation.highlightStartCodons;
@@ -333,7 +333,7 @@ translationsCheckbox.addEventListener('change', (e) => {
   cgv.draw();
 });
 
-sms3RulerCheckbox.addEventListener('change', (e) => {
+tangentialRulerCheckbox.addEventListener('change', (e) => {
   cgv.ruler.update(e.target.checked ?
     {labelPosition: 'outer', labelStyle: 'tangential'} :
     {labelPosition: 'inner', labelStyle: 'default'}
