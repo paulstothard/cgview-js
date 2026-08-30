@@ -79,13 +79,62 @@ describe('Zoom detail options', () => {
     const cgv = new Viewer('#map', {width: 800, height: 600});
     cgv.io.loadJSON(json);
     cgv.resize(800, 600);
-    const ctx = cgv.canvas.context('map');
-    const fillText = jest.spyOn(ctx, 'fillText');
+    const curvedLabel = jest.spyOn(cgv.annotation._featureLabelRenderer, '_drawCurvedLabel');
 
     cgv.draw();
 
     expect(cgv.zoomFactor).toBeCloseTo(1);
-    expect(fillText.mock.calls.some(call => call[0] === 'DNA polymerase')).toBe(true);
+    expect(curvedLabel.mock.calls.some(call => call[1].name === 'DNA polymerase')).toBe(true);
+  });
+
+  test('curves circular inline labels one glyph at a time', () => {
+    const cgv = new Viewer('#map', {
+      width: 800,
+      height: 600,
+      sequence: {length: 1000},
+      annotation: {font: 'sans-serif, plain, 14', drawInlineLabels: true},
+      features: [{name: 'curved label', source: 'test', start: 400, stop: 600, legend: 'Feature'}],
+    });
+    const feature = cgv.features(1);
+    const visibleRange = new CGRange(cgv.sequence.mapContig, 1, 1000);
+    const ctx = cgv.canvas.context('map');
+    ctx.fillText.mockClear();
+    ctx.measureText.mockClear();
+    ctx.rotate.mockClear();
+    ctx.translate.mockClear();
+
+    cgv.annotation._featureLabelRenderer.draw([feature], 150, 24, visibleRange);
+
+    expect(ctx.fillText.mock.calls.map(call => call[0])).toEqual(Array.from(feature.name));
+    expect(ctx.measureText).toHaveBeenCalledTimes(Array.from(feature.name).length);
+    expect(ctx.rotate).toHaveBeenCalledTimes(Array.from(feature.name).length);
+    expect(new Set(ctx.rotate.mock.calls.map(call => call[0])).size).toBeGreaterThan(1);
+
+    ctx.measureText.mockClear();
+    cgv.annotation._featureLabelRenderer.draw([feature], 150, 24, visibleRange);
+    expect(ctx.measureText).not.toHaveBeenCalled();
+  });
+
+  test('keeps linear inline labels straight', () => {
+    const cgv = new Viewer('#map', {
+      width: 800,
+      height: 600,
+      sequence: {length: 1000},
+      annotation: {font: 'sans-serif, plain, 14', drawInlineLabels: true},
+      features: [{name: 'straight label', source: 'test', start: 300, stop: 700, legend: 'Feature'}],
+    });
+    cgv.format = 'linear';
+    const feature = cgv.features(1);
+    const visibleRange = new CGRange(cgv.sequence.mapContig, 1, 1000);
+    const ctx = cgv.canvas.context('map');
+    ctx.fillText.mockClear();
+    ctx.rotate.mockClear();
+
+    cgv.annotation._featureLabelRenderer.draw([feature], 0, 24, visibleRange);
+
+    expect(ctx.fillText).toHaveBeenCalledTimes(1);
+    expect(ctx.fillText).toHaveBeenCalledWith(feature.name, 0, expect.any(Number));
+    expect(ctx.rotate).not.toHaveBeenCalled();
   });
 
   test('omits inline labels when the feature or zoom level cannot accommodate them', () => {

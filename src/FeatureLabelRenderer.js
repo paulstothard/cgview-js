@@ -30,6 +30,7 @@ class FeatureLabelRenderer {
 
   constructor(annotation) {
     this.annotation = annotation;
+    this._glyphWidthCache = new WeakMap();
   }
 
   get viewer() {
@@ -147,21 +148,89 @@ class FeatureLabelRenderer {
           bp,
           centerOffset: adjustedCenterOffset,
           fontSize,
+          availableWidth,
+          pixelsPerBp,
           color: this._labelColor(feature),
         };
       }
     }
   }
 
-  _tangentAngle(bp) {
-    if (this.viewer.format !== 'circular') { return 0; }
-    let angle = this.viewer.scale.bp(bp) + (Math.PI / 2);
-    while (angle > Math.PI) { angle -= Math.PI * 2; }
-    while (angle <= -Math.PI) { angle += Math.PI * 2; }
-    if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
-      angle += Math.PI;
+  _arcIsUpsideDown(bp) {
+    const tau = Math.PI * 2;
+    let angle = this.viewer.scale.bp(bp) % tau;
+    if (angle < 0) { angle += tau; }
+    return angle > 0 && angle < Math.PI;
+  }
+
+  _glyphPlan(ctx, feature, metrics) {
+    const label = feature.label;
+    const font = feature.label.font;
+    const cacheKey = `${font.css}\n${feature.name}`;
+    let cached = this._glyphWidthCache.get(label);
+    if (!cached || cached.key !== cacheKey) {
+      ctx.font = font.css;
+      const characters = Array.from(feature.name);
+      const widths = characters.map(character => Math.max(1, ctx.measureText(character).width));
+      cached = {
+        key: cacheKey,
+        characters,
+        widths,
+        totalWidth: widths.reduce((sum, width) => sum + width, 0),
+      };
+      this._glyphWidthCache.set(label, cached);
     }
-    return angle;
+
+    let fontSize = metrics.fontSize;
+    let scale = fontSize / font.size;
+    let totalWidth = cached.totalWidth * scale;
+    if (totalWidth > metrics.availableWidth) {
+      fontSize = Math.floor(fontSize * metrics.availableWidth / totalWidth);
+      if (fontSize < this.annotation.inlineLabelMinFontSize) { return; }
+      scale = fontSize / font.size;
+      totalWidth = cached.totalWidth * scale;
+    }
+    if (totalWidth > metrics.availableWidth) { return; }
+    ctx.font = font.cssScaled(scale);
+    return {characters: cached.characters, widths: cached.widths, totalWidth, scale};
+  }
+
+  _drawStraightLabel(ctx, feature, metrics) {
+    const point = this.canvas.pointForBp(metrics.bp, metrics.centerOffset);
+    const font = feature.label.font;
+    ctx.save();
+    ctx.translate(point.x, point.y);
+    ctx.font = font.cssScaled(metrics.fontSize / font.size);
+    ctx.fillStyle = metrics.color.rgbaString;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(feature.name, 0, metrics.fontSize * 0.35);
+    ctx.restore();
+  }
+
+  _drawCurvedLabel(ctx, feature, metrics) {
+    const plan = this._glyphPlan(ctx, feature, metrics);
+    if (!plan) { return; }
+    const flipped = this._arcIsUpsideDown(metrics.bp);
+    const direction = flipped ? -1 : 1;
+    let cursor = -plan.totalWidth / 2;
+
+    ctx.fillStyle = metrics.color.rgbaString;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let index = 0; index < plan.characters.length; index += 1) {
+      const width = plan.widths[index] * plan.scale;
+      const pixelOffset = cursor + (width / 2);
+      const glyphBp = metrics.bp + (direction * pixelOffset / metrics.pixelsPerBp);
+      const point = this.canvas.pointForBp(glyphBp, metrics.centerOffset);
+      const angle = this.viewer.scale.bp(glyphBp) + (Math.PI / 2) + (flipped ? Math.PI : 0);
+      ctx.save();
+      ctx.translate(point.x, point.y);
+      ctx.rotate(angle);
+      ctx.fillText(plan.characters[index], 0, 0);
+      ctx.restore();
+      cursor += width;
+    }
   }
 
   draw(features, centerOffset, slotThickness, visibleRange) {
@@ -171,17 +240,11 @@ class FeatureLabelRenderer {
     for (const feature of features) {
       const metrics = this.metricsFor(feature, centerOffset, slotThickness, visibleRange);
       if (!metrics) { continue; }
-      const point = this.canvas.pointForBp(metrics.bp, metrics.centerOffset);
-      const font = feature.label.font;
-      ctx.save();
-      ctx.translate(point.x, point.y);
-      ctx.rotate(this._tangentAngle(metrics.bp));
-      ctx.font = font.cssScaled(metrics.fontSize / font.size);
-      ctx.fillStyle = metrics.color.rgbaString;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'alphabetic';
-      ctx.fillText(feature.name, 0, metrics.fontSize * 0.35);
-      ctx.restore();
+      if (this.viewer.format === 'circular') {
+        this._drawCurvedLabel(ctx, feature, metrics);
+      } else {
+        this._drawStraightLabel(ctx, feature, metrics);
+      }
     }
     ctx.restore();
   }
