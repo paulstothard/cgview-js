@@ -167,6 +167,63 @@ describe('SequenceTranslation', () => {
     expect(translation.codonsForRange(contig, range, -1, 1, table).map(c => c.aminoAcid)).toEqual(['H', 'F', 'L', 'G']);
   });
 
+  test('hit-tests direct and reverse codons on demand using exact lane geometry', () => {
+    const cgv = new Viewer('#map', {
+      sequence: {seq: 'ATGAAATAACCC', translation: {visible: true}},
+      settings: {geneticCode: 11},
+    });
+    const translation = cgv.sequence.translation;
+    jest.spyOn(cgv.backbone, 'pixelsPerBp').mockReturnValue(20);
+    const visitCodons = jest.spyOn(translation, '_forEachCodon');
+    const materializeCodons = jest.spyOn(translation, 'codonsForRange');
+    const layout = translation._layoutForScale(1);
+    const backboneOffset = cgv.backbone.adjustedCenterOffset;
+
+    const direct = translation.hitTest(2.2, backboneOffset + layout.firstLaneCenterOffset);
+    expect(direct).toEqual(expect.objectContaining({
+      start: 1,
+      stop: 3,
+      codon: 'ATG',
+      aminoAcid: 'M',
+      aminoAcidName: 'Methionine',
+      signedFrame: 1,
+      isStart: true,
+      geneticCode: 11,
+      geneticCodeName: 'Bacterial and Plant Plastid',
+    }));
+
+    const reverse = translation.hitTest(2.2, backboneOffset - layout.firstLaneCenterOffset);
+    expect(reverse).toEqual(expect.objectContaining({
+      start: 1,
+      stop: 3,
+      codon: 'CAT',
+      aminoAcid: 'H',
+      aminoAcidName: 'Histidine',
+      signedFrame: -1,
+    }));
+    expect(visitCodons).toHaveBeenCalledTimes(2);
+    expect(materializeCodons).not.toHaveBeenCalled();
+  });
+
+  test('does not hit-test DNA rows, lane gaps, or hidden translation detail', () => {
+    const cgv = new Viewer('#map', {
+      sequence: {seq: 'ATGAAATAACCC', translation: {visible: true}},
+    });
+    const translation = cgv.sequence.translation;
+    jest.spyOn(cgv.backbone, 'pixelsPerBp').mockReturnValue(20);
+    const layout = translation._layoutForScale(1);
+    const backboneOffset = cgv.backbone.adjustedCenterOffset;
+
+    expect(translation.hitTest(2, backboneOffset)).toBeUndefined();
+    expect(translation.hitTest(
+      2,
+      backboneOffset + layout.firstLaneCenterOffset + (layout.laneStep / 2)
+    )).toBeUndefined();
+
+    translation.visible = false;
+    expect(translation.hitTest(2, backboneOffset + layout.firstLaneCenterOffset)).toBeUndefined();
+  });
+
   test('does not translate across contig boundaries', () => {
     const cgv = new Viewer('#map', {
       sequence: {

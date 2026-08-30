@@ -53,4 +53,30 @@ describe('Highlighter', () => {
       .toContain('<div>CDS: ABC_001<div>');
   });
 
+  test('shows complete amino-acid details without allocating a hover highlight', () => {
+    expect(cgv.highlighter.translation.highlighting).toBe(false);
+    expect(cgv.highlighter.translation.popovers).toBe(true);
+    const html = cgv.highlighter.translationPopoverContentsDefault({
+      element: {
+        aminoAcid: 'M',
+        aminoAcidName: 'Methionine',
+        codon: 'ATG',
+        start: 124,
+        stop: 126,
+        signedFrame: -1,
+        isStart: true,
+        isStop: false,
+        geneticCode: 11,
+        geneticCodeName: 'Bacterial and Plant Plastid',
+      },
+    });
+
+    expect(html).toContain('M — Methionine');
+    expect(html).toContain('Codon: ATG');
+    expect(html).toContain('Position: 124–126 bp');
+    expect(html).toContain('Frame: −1');
+    expect(html).toContain('Status: Start codon');
+    expect(html).toContain('Genetic code: 11 — Bacterial and Plant Plastid');
+  });
+
 });

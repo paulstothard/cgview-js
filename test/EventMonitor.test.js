@@ -41,4 +41,20 @@ describe('EventMonitor', () => {
     expect(cgv.legend.draw).toHaveBeenCalledTimes(1);
   });
 
+  test('reports an on-demand translated codon before the generic backbone', () => {
+    document.body.innerHTML = '<div id="translation-map"></div>';
+    const viewer = new Viewer('#translation-map', {
+      sequence: {seq: 'ATGAAATAACCC', translation: {visible: true}},
+    });
+    viewer.legend.visible = false;
+    const codon = {aminoAcid: 'M', codon: 'ATG'};
+    const hitTest = jest.spyOn(viewer.sequence.translation, 'hitTest').mockReturnValue(codon);
+    jest.spyOn(viewer.backbone, 'containsCenterOffset').mockReturnValue(true);
+
+    const result = viewer.eventMonitor._getElement(undefined, 2, 100, 20, 20);
+
+    expect(hitTest).toHaveBeenCalledWith(2, 100);
+    expect(result).toEqual({elementType: 'translation', element: codon});
+  });
+
 });

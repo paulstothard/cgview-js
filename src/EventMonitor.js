@@ -31,7 +31,7 @@ import * as d3 from 'd3';
  * -----------|-----------------------------------------------
  *  bp        | Base pair
  *  centerOffset | Distance from center of the map. For a circular map, this is the radius, while for a linear map, it's the distance from the backbone.
- *  elementType | One of: 'legendItem', 'caption', 'feature', 'plot', 'backbone', 'contig', 'label', or undefined
+ *  elementType | One of: 'legendItem', 'caption', 'feature', 'plot', 'translation', 'backbone', 'contig', 'label', or undefined
  *  element   | The element (e.g, a feature), if there is one.
  *  slot      | Slot (if there is one). Track can be accessed from the slot (<em>slot.track</em>).
  *  score     | Score for element (e.g. feature, plot), if available.
@@ -240,7 +240,7 @@ class EventMonitor {
 
   /**
    * Returns an object with the *element* and *elementType* for the given *slot*, *bp*, and *centerOffset*.
-   * ElementType can be one of the following: 'plot', 'feature', 'label', 'legendItem', 'captionItem', 'contig', 'backbone'
+   * ElementType can be one of the following: 'plot', 'feature', 'translation', 'label', 'legendItem', 'captionItem', 'contig', 'backbone'
    * @param {Slot}  slot - the slot for the event.
    * @param {Number}  bp - the bp for the event.
    * @param {Number}  centerOffset - the centerOffset for the event.
@@ -295,6 +295,15 @@ class EventMonitor {
       } else if (slot._plot) {
         elementType = 'plot';
         element = slot._plot;
+      }
+    }
+
+    // Translation lanes are part of the expanded backbone surface but have
+    // more specific, on-demand codon information than the backbone itself.
+    if (!elementType) {
+      element = this.viewer.sequence.translation.hitTest(bp, centerOffset);
+      if (element) {
+        elementType = 'translation';
       }
     }
 
