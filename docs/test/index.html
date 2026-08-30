@@ -28,10 +28,10 @@
     <script src="../scripts/svgcanvas.iife.js"></script>
     <!-- CGView -->
     <!-- <script src='../dist/cgview.min.js'></script> -->
-    <script src='../dist/cgview.js?v=translation-hover-shading-1'></script>
+    <script src='../dist/cgview.js?v=track-sizing-3'></script>
 
     <link rel="stylesheet" href="../dist/cgview.css" />
-    <link rel="stylesheet" href="../styles/controls.css?v=translation-hover-shading-1" />
+    <link rel="stylesheet" href="../styles/controls.css?v=track-sizing-3" />
 
     <!-- CGParse -->
     <script src='../scripts/CGParse.min.js'></script>
@@ -40,7 +40,7 @@
     <script src='performance.js'></script>
     <link rel="stylesheet" href="test.css" />
     <!-- Test Map Data -->
-    <script src='maps.js?v=translation-hover-shading-1'></script>
+    <script src='maps.js?v=track-sizing-3'></script>
 
     <!-- Plausible Analytics -->
     <script defer data-domain="js.cgview.ca" src="https://stats.stothardresearch.ca/js/plausible.outbound-links.js"></script>
@@ -182,6 +182,20 @@
           <div class='zoom-detail-help'>Direct frames +1 to +3 draw outward; reverse frames −1 to −3 draw inward. Start and stop cells use separate fill, border, and text colors.</div>
           <hr />
         </div>
+        <div class='section-track-sizing'>
+          <div class='test-heading'>Track Sizing</div>
+          <label for='track-sizing-track'>Choose a feature or plot track</label>
+          <select id='track-sizing-track' class='form-select form-select-sm'></select>
+          <div class='track-sizing-primary-label'>
+            <label for='track-sizing-ratio'>Selected track thickness</label>
+            <output id='track-sizing-ratio-output' for='track-sizing-ratio'></output>
+          </div>
+          <input id='track-sizing-ratio' class='track-sizing-primary-range' type='range' min='0' max='100' step='1' />
+          <div class='track-sizing-range-hints'><span>Thinner</span><span>Original</span><span>Thicker</span></div>
+          <button id='track-sizing-reset' type='button' class='btn btn-sm btn-outline-secondary'>Reset selected track</button>
+          <div class='track-sizing-help'>Choose a track and drag. Other tracks keep their size, the chosen thickness continues to work as you zoom, and exported CGView JSON keeps the result.</div>
+          <hr />
+        </div>
         <div class='section-labels'>
           <div class='test-heading'>Label Testing</div>
           <div class='label-row'>
@@ -246,8 +260,8 @@
     <!-- Bootstrap JavaScript -->
     <script src="../scripts/bootstrap.min.js"></script>
 
-    <script src='test.js?v=translation-hover-shading-1'></script>
-    <script src='../scripts/controls.js?v=translation-hover-shading-1'></script>
+    <script src='test.js?v=track-sizing-3'></script>
+    <script src='../scripts/controls.js?v=track-sizing-3'></script>
 
   </body>
 </html>
