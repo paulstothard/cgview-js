@@ -18,6 +18,61 @@ describe('SequenceTranslation', () => {
     expect(cgv.sequence.thickness).toBeGreaterThan(baseThickness);
   });
 
+  test('batches size-affecting updates into one synchronous layout refresh', () => {
+    const cgv = new Viewer('#map', {sequence: {seq: 'ATGAAATAACCC'}});
+    const translation = cgv.sequence.translation;
+    const refreshThickness = jest.spyOn(cgv.backbone, 'refreshThickness');
+    const adjustProportions = jest.spyOn(cgv.layout, '_adjustProportions');
+
+    translation.update({
+      visible: true,
+      font: 'monospace,bold,13',
+      laneSpacing: 3,
+      minimumScale: 0.6,
+    });
+
+    expect(refreshThickness).toHaveBeenCalledTimes(1);
+    expect(adjustProportions).toHaveBeenCalledTimes(1);
+    expect(adjustProportions).toHaveBeenCalledWith({duration: 0});
+    expect(refreshThickness.mock.invocationCallOrder[0])
+      .toBeLessThan(adjustProportions.mock.invocationCallOrder[0]);
+  });
+
+  test('does not recalculate layout for translation style-only updates', () => {
+    const cgv = new Viewer('#map', {sequence: {seq: 'ATGAAATAACCC'}});
+    const adjustProportions = jest.spyOn(cgv.layout, '_adjustProportions');
+
+    cgv.sequence.translation.update({
+      color: 'navy',
+      startColor: 'green',
+      highlightStopCodons: false,
+    });
+
+    expect(adjustProportions).not.toHaveBeenCalled();
+  });
+
+  test('refreshes layout for direct visibility changes', () => {
+    const cgv = new Viewer('#map', {sequence: {seq: 'ATGAAATAACCC'}});
+    const adjustProportions = jest.spyOn(cgv.layout, '_adjustProportions');
+
+    cgv.sequence.translation.visible = true;
+
+    expect(adjustProportions).toHaveBeenCalledTimes(1);
+    expect(adjustProportions).toHaveBeenCalledWith({duration: 0});
+  });
+
+  test('forces slot layout when a draw changes backbone detail thickness', () => {
+    const cgv = new Viewer('#map', {sequence: {seq: 'ATGAAATAACCC'}});
+    const updateLayout = jest.spyOn(cgv.layout, 'updateLayout');
+    jest.spyOn(cgv.backbone, 'refreshThickness').mockImplementation(() => {
+      cgv.backbone._bpThicknessAddition += 10;
+    });
+
+    cgv.layout.drawMapWithoutSlots(true);
+
+    expect(updateLayout).toHaveBeenCalledWith(true);
+  });
+
   test('uses exact, equal radial spacing around all translation lanes', () => {
     const cgv = new Viewer('#map', {
       sequence: {seq: 'ATGAAATAACCC', translation: {visible: true, laneSpacing: 2}},

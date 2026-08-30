@@ -594,9 +594,13 @@ class Layout {
    * zoomFactor is above 2.
    * @private
    */
-  _adjustProportions() {
+  _adjustProportions(options = {}) {
     const viewer = this.viewer;
     if (viewer.loading) { return; }
+    const duration = utils.defaultFor(options.duration, 500);
+    // Capture the focal base before changing the backbone radius. Reading it
+    // afterwards would derive a different base from the old scale domains.
+    const focalBp = viewer.zoomFactor > 2 ? viewer.bpFloat : undefined;
     const visibleSlots = this.visibleSlots();
     this._updateSlotThicknessRatioStats(visibleSlots);
     // The initial maximum amount of space for drawing slots, backbone, dividers, etc
@@ -644,7 +648,17 @@ class Layout {
     this.updateLayout(true);
     // Recenter map
     if (viewer.zoomFactor > 2) {
-      viewer.moveTo(undefined, undefined, {duration: 500});
+      if (duration > 0) {
+        viewer.moveTo(focalBp, undefined, {duration});
+      } else {
+        // A component toggle must be atomic: cancel a pending move and update
+        // the domains now so callers can immediately render consistent geometry.
+        d3.select(this.canvas.node('ui')).interrupt();
+        const domains = this.domainsFor(focalBp, viewer.zoomFactor, 0);
+        viewer.scale.x.domain([domains[0], domains[1]]);
+        viewer.scale.y.domain([domains[2], domains[3]]);
+        viewer.trigger('zoom');
+      }
     }
   }
   // NOTE:
@@ -857,11 +871,14 @@ class Layout {
     // FIXME: contexts
     // ctx.textBaseline = 'top';
 
-    // Draw Backbone
+    // Draw Backbone. Its base-pair detail thickness can change without a zoom
+    // change (for example when six-frame translation is toggled), so force new
+    // slot offsets whenever the draw refresh changes that thickness.
+    const previousBackboneThickness = backbone.adjustedThickness;
     backbone.draw(fast);
 
     // Recalculate the slot offsets and thickness if the zoom level has changed
-    this.updateLayout();
+    this.updateLayout(backbone.adjustedThickness !== previousBackboneThickness);
 
     // Divider rings
     viewer.dividers.draw();
@@ -1149,5 +1166,4 @@ class Layout {
 }
 
 export default Layout;
-
 

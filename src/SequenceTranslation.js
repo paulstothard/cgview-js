@@ -98,10 +98,10 @@ class SequenceTranslation extends CGObject {
   }
 
   set visible(value) {
-    this._visible = Boolean(value);
-    if (this._sequence && this.viewer.backbone && !this.viewer.loading) {
-      this.viewer.layout._adjustProportions();
-    }
+    const visible = Boolean(value);
+    if (visible === this._visible) { return; }
+    this._visible = visible;
+    this._requestLayoutUpdate();
   }
 
   get font() {
@@ -109,7 +109,10 @@ class SequenceTranslation extends CGObject {
   }
 
   set font(value) {
-    this._font = value.toString() === 'Font' ? value : new Font(value);
+    const font = value.toString() === 'Font' ? value : new Font(value);
+    if (font.string === this._font?.string) { return; }
+    this._font = font;
+    this._requestLayoutUpdate();
   }
 
   get color() {
@@ -205,7 +208,21 @@ class SequenceTranslation extends CGObject {
   }
 
   set laneSpacing(value) {
-    this._laneSpacing = Math.max(0, Number(value) || 0);
+    const laneSpacing = Math.max(0, Number(value) || 0);
+    if (laneSpacing === this._laneSpacing) { return; }
+    this._laneSpacing = laneSpacing;
+    this._requestLayoutUpdate();
+  }
+
+  get minimumScale() {
+    return this._minimumScale;
+  }
+
+  set minimumScale(value) {
+    const minimumScale = Number(value);
+    if (minimumScale === this._minimumScale) { return; }
+    this._minimumScale = minimumScale;
+    this._requestLayoutUpdate();
   }
 
   get lanesPerStrand() {
@@ -425,19 +442,44 @@ class SequenceTranslation extends CGObject {
     ctx.restore();
   }
 
+  /**
+   * Recalculate backbone and slot geometry once after a size-affecting option
+   * changes. Updates are applied synchronously so the next draw cannot combine
+   * a new backbone thickness with stale feature-slot offsets.
+   * @private
+   */
+  _requestLayoutUpdate() {
+    if (this._layoutUpdatesSuspended) {
+      this._layoutUpdatePending = true;
+      return;
+    }
+    if (!this._sequence || !this.viewer.backbone || this.viewer.loading) { return; }
+    this.viewer.backbone.refreshThickness();
+    this.viewer.layout._adjustProportions({duration: 0});
+  }
+
   update(attributes) {
     this._configured = true;
-    this.viewer.updateRecords(this, attributes, {
-      recordClass: 'SequenceTranslation',
-      validKeys: [
-        'font', 'color', 'backgroundColor',
-        'startColor', 'startBorderColor', 'startTextColor',
-        'stopColor', 'stopBorderColor', 'stopTextColor',
-        'highlightStartCodons', 'highlightStopCodons',
-        'laneSpacing', 'minimumScale', 'visible'
-      ]
-    });
-    this.viewer.layout._adjustProportions();
+    this._layoutUpdatesSuspended = true;
+    this._layoutUpdatePending = false;
+    try {
+      this.viewer.updateRecords(this, attributes, {
+        recordClass: 'SequenceTranslation',
+        validKeys: [
+          'font', 'color', 'backgroundColor',
+          'startColor', 'startBorderColor', 'startTextColor',
+          'stopColor', 'stopBorderColor', 'stopTextColor',
+          'highlightStartCodons', 'highlightStopCodons',
+          'laneSpacing', 'minimumScale', 'visible'
+        ]
+      });
+    } finally {
+      this._layoutUpdatesSuspended = false;
+    }
+    if (this._layoutUpdatePending) {
+      this._layoutUpdatePending = false;
+      this._requestLayoutUpdate();
+    }
     this.viewer.trigger('sequence-translation-update', { attributes });
   }
 
