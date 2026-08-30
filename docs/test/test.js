@@ -364,6 +364,20 @@ function syncZoomDetailControls() {
   truncateInlineLabelsCheckbox.disabled = !inlineLabelsEnabled;
 }
 
+function translationsDrawAtCurrentZoom() {
+  const pixelsPerBp = cgv.backbone.pixelsPerBp();
+  return cgv.sequence.isDetailVisible(pixelsPerBp) &&
+    cgv.sequence.translation.scaleFactor(pixelsPerBp) > 0;
+}
+
+function updateTranslation(attributes) {
+  const drewBeforeUpdate = translationsDrawAtCurrentZoom();
+  cgv.sequence.translation.update(attributes);
+  if (drewBeforeUpdate || translationsDrawAtCurrentZoom()) {
+    cgv.draw();
+  }
+}
+
 cgv.on('sequence-translation-update.zoom-detail-controls', () => {
   if (!cgv.loading) {
     syncZoomDetailControls();
@@ -385,13 +399,11 @@ for (const eventName of ['tracks-add', 'tracks-update', 'tracks-remove']) {
 }
 
 translationsCheckbox.addEventListener('change', (e) => {
-  cgv.sequence.translation.update({visible: e.target.checked});
-  cgv.draw();
+  updateTranslation({visible: e.target.checked});
 });
 
 translationEdgePaddingInput.addEventListener('change', (e) => {
-  cgv.sequence.translation.update({edgePadding: Number(e.target.value)});
-  cgv.draw();
+  updateTranslation({edgePadding: Number(e.target.value)});
 });
 
 tangentialRulerCheckbox.addEventListener('change', (e) => {
@@ -439,28 +451,27 @@ truncateInlineLabelsCheckbox.addEventListener('change', (e) => {
 });
 
 highlightStartsCheckbox.addEventListener('change', (e) => {
-  cgv.sequence.translation.update({highlightStartCodons: e.target.checked});
-  cgv.draw();
+  updateTranslation({highlightStartCodons: e.target.checked});
 });
 
 highlightStopsCheckbox.addEventListener('change', (e) => {
-  cgv.sequence.translation.update({highlightStopCodons: e.target.checked});
-  cgv.draw();
+  updateTranslation({highlightStopCodons: e.target.checked});
 });
 
 startColorInput.addEventListener('input', (e) => {
-  cgv.sequence.translation.update({startColor: e.target.value});
-  cgv.draw();
+  updateTranslation({startColor: e.target.value});
 });
 
 stopColorInput.addEventListener('input', (e) => {
-  cgv.sequence.translation.update({stopColor: e.target.value});
-  cgv.draw();
+  updateTranslation({stopColor: e.target.value});
 });
 
 geneticCodeSelect.addEventListener('change', (e) => {
+  const translationsWereDrawn = translationsDrawAtCurrentZoom();
   cgv.settings.update({geneticCode: Number(e.target.value)});
-  cgv.draw();
+  if (translationsWereDrawn || translationsDrawAtCurrentZoom()) {
+    cgv.draw();
+  }
 });
 
 inlineLabelMinFont.addEventListener('change', (e) => {

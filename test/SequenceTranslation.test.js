@@ -62,6 +62,20 @@ describe('SequenceTranslation', () => {
     expect(adjustProportions).toHaveBeenCalledWith({duration: 0});
   });
 
+  test('does not recalculate layout when translation has zero thickness at the current zoom', () => {
+    const cgv = new Viewer('#map', {sequence: {seq: 'A'.repeat(1000)}});
+    jest.spyOn(cgv.backbone, 'pixelsPerBp').mockReturnValue(0.5);
+    const refreshThickness = jest.spyOn(cgv.backbone, 'refreshThickness');
+    const adjustProportions = jest.spyOn(cgv.layout, '_adjustProportions');
+    const previousThickness = cgv.backbone.adjustedThickness;
+
+    cgv.sequence.translation.update({visible: true});
+
+    expect(refreshThickness).toHaveBeenCalledTimes(1);
+    expect(cgv.backbone.adjustedThickness).toBe(previousThickness);
+    expect(adjustProportions).not.toHaveBeenCalled();
+  });
+
   test('forces slot layout when a draw changes backbone detail thickness', () => {
     const cgv = new Viewer('#map', {sequence: {seq: 'ATGAAATAACCC'}});
     const updateLayout = jest.spyOn(cgv.layout, 'updateLayout');
