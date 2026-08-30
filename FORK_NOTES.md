@@ -1,4 +1,4 @@
-# Enhanced CGView.js development fork
+# CGView.js development fork
 
 This public fork is maintained by Paul Stothard and remains based on Jason
 Grant's [CGView.js repository](https://github.com/sciguy/cgview-js). It keeps the
@@ -61,10 +61,10 @@ upstream CGView.js release.
 - `main` mirrors the original project's main development line.
 - `feature/zoomed-translations-ruler-labels` contains the upstream-compatible
   implementation and is the branch intended for future pull requests.
-- `enhanced` contains that implementation plus this fork-specific documentation
+- `development` contains that implementation plus this fork-specific documentation
   and is the public-facing branch for this fork.
 
-Keeping the fork description on `enhanced` prevents fork-specific wording from
+Keeping the fork description on `development` prevents fork-specific wording from
 being included accidentally in an upstream pull request.
 
 ## Local verification
