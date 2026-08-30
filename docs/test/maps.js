@@ -60,7 +60,7 @@ maps = {
   zoom_details: {
     name: 'Zoom Detail Features [360 bp]',
     type: 'test',
-    url: 'maps/test_zoom_details.json?v=curved-inline-labels',
+    url: 'maps/test_zoom_details.json?v=translation-lane-geometry',
   },
   paper: {
     name: 'Paper Figure (E. coli PA2)',

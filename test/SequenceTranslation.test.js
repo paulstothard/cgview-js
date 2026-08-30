@@ -18,6 +18,24 @@ describe('SequenceTranslation', () => {
     expect(cgv.sequence.thickness).toBeGreaterThan(baseThickness);
   });
 
+  test('uses exact, equal radial spacing around all translation lanes', () => {
+    const cgv = new Viewer('#map', {
+      sequence: {seq: 'ATGAAATAACCC', translation: {visible: true, laneSpacing: 2}},
+    });
+    const translation = cgv.sequence.translation;
+    for (const scaleFactor of [1, 0.5]) {
+      const layout = translation._layoutForScale(scaleFactor);
+      const firstInnerEdge = layout.firstLaneCenterOffset - (layout.laneHeight / 2);
+      const trailingEdgeGap = layout.backboneEdgeOffset - layout.outerLaneEdgeOffset;
+
+      expect(firstInnerEdge - (cgv.sequence.baseThickness * scaleFactor / 2)).toBeCloseTo(layout.laneSpacing);
+      expect(layout.laneStep - layout.laneHeight).toBeCloseTo(layout.laneSpacing);
+      expect(trailingEdgeGap).toBeCloseTo(layout.laneSpacing);
+    }
+    expect(translation.strandThickness).toBe((3 * translation.laneHeight) + (4 * translation.laneSpacing));
+    expect(translation.thickness).toBe(2 * translation.strandThickness);
+  });
+
   test('translates all direct frames from the map origin', () => {
     const cgv = new Viewer('#map', {
       sequence: {seq: 'ATGAAATAACCC', translation: {visible: true}},
@@ -113,13 +131,17 @@ describe('SequenceTranslation', () => {
     expect(translation.stopTextColor.rgbaString).toBe('rgba(153,27,27,1)');
 
     const drawElement = jest.spyOn(cgv.canvas, 'drawElement').mockImplementation(() => {});
-    translation._drawCodon(codons[0].start, codons[0].aminoAcid, codons[0].isStart, codons[0].isStop, 100, 15, 1);
+    const pointForBp = jest.spyOn(cgv.canvas, 'pointForBp').mockReturnValue({x: 12, y: 34});
+    const fillText = jest.spyOn(cgv.canvas.context('map'), 'fillText');
+    translation._drawCodon(codons[0].start, codons[0].aminoAcid, codons[0].isStart, codons[0].isStop, 100, 15);
     expect(drawElement).toHaveBeenCalledWith(expect.objectContaining({
       color: 'rgba(209,250,229,1)',
       showBorder: true,
       borderColor: 'rgba(5,150,105,1)',
     }));
-    translation._drawCodon(codons[1].start, codons[1].aminoAcid, codons[1].isStart, codons[1].isStop, 100, 15, 1);
+    expect(pointForBp).toHaveBeenLastCalledWith(codons[0].start + 1, 100);
+    expect(fillText).toHaveBeenLastCalledWith(codons[0].aminoAcid, 12, 34);
+    translation._drawCodon(codons[1].start, codons[1].aminoAcid, codons[1].isStart, codons[1].isStop, 100, 15);
     expect(drawElement).toHaveBeenLastCalledWith(expect.objectContaining({
       color: 'rgba(254,226,226,1)',
       showBorder: true,
@@ -127,7 +149,7 @@ describe('SequenceTranslation', () => {
     }));
 
     translation.update({highlightStartCodons: false, highlightStopCodons: false});
-    translation._drawCodon(codons[0].start, codons[0].aminoAcid, codons[0].isStart, codons[0].isStop, 100, 15, 1);
+    translation._drawCodon(codons[0].start, codons[0].aminoAcid, codons[0].isStart, codons[0].isStop, 100, 15);
     expect(drawElement).toHaveBeenLastCalledWith(expect.objectContaining({
       color: translation.backgroundColor.rgbaString,
       showBorder: false,

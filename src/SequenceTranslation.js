@@ -56,6 +56,7 @@ const COMPLEMENT = {
  * [stopTextColor](#stopTextColor)   | String  | Stop-codon amino-acid color
  * [highlightStartCodons](#highlightStartCodons) | Boolean | Highlight starts defined by the active genetic code [Default: true]
  * [highlightStopCodons](#highlightStopCodons) | Boolean | Highlight stops defined by the active genetic code [Default: true]
+ * [laneSpacing](#laneSpacing)         | Number  | Equal spacing between lanes and at the inner and outer translation edges [Default: 2]
  * [visible](CGObject.html#visible)  | Boolean | Show six-frame translations at sufficient zoom [Default: false]
  *
  * @extends CGObject
@@ -196,12 +197,60 @@ class SequenceTranslation extends CGObject {
   }
 
   /**
+   * @member {Number} - Radial spacing between translation lanes and at both
+   * translation edges.
+   */
+  get laneSpacing() {
+    return this._laneSpacing;
+  }
+
+  set laneSpacing(value) {
+    this._laneSpacing = Math.max(0, Number(value) || 0);
+  }
+
+  get lanesPerStrand() {
+    return 3;
+  }
+
+  /**
+   * Radial space occupied by one strand's lanes, including equal spacing at
+   * both edges. This is the source of truth for backbone expansion.
+   * @private
+   */
+  get strandThickness() {
+    return (this.lanesPerStrand * this.laneHeight) + ((this.lanesPerStrand + 1) * this.laneSpacing);
+  }
+
+  /**
    * Extra backbone thickness required for three lanes on each strand.
    * @private
    */
   get thickness() {
     if (!this.visible || !this.sequence.hasSeq) { return 0; }
-    return 6 * (this.laneHeight + this.laneSpacing);
+    return 2 * this.strandThickness;
+  }
+
+  /**
+   * Return the scaled radial geometry shared by lane placement and backbone
+   * sizing. Offsets are distances from the backbone center.
+   * @private
+   */
+  _layoutForScale(scaleFactor) {
+    const laneHeight = this.laneHeight * scaleFactor;
+    const laneSpacing = this.laneSpacing * scaleFactor;
+    const laneStep = laneHeight + laneSpacing;
+    const sequenceHalfThickness = this.sequence.baseThickness * scaleFactor / 2;
+    const firstLaneCenterOffset = sequenceHalfThickness + laneSpacing + (laneHeight / 2);
+    const outerLaneEdgeOffset = firstLaneCenterOffset + ((this.lanesPerStrand - 1) * laneStep) + (laneHeight / 2);
+    const backboneEdgeOffset = sequenceHalfThickness + (this.strandThickness * scaleFactor);
+    return {
+      laneHeight,
+      laneSpacing,
+      laneStep,
+      firstLaneCenterOffset,
+      outerLaneEdgeOffset,
+      backboneEdgeOffset,
+    };
   }
 
   /**
@@ -312,7 +361,7 @@ class SequenceTranslation extends CGObject {
     return codons;
   }
 
-  _drawCodon(start, aminoAcid, isStart, isStop, centerOffset, width, scaleFactor) {
+  _drawCodon(start, aminoAcid, isStart, isStop, centerOffset, width) {
     let backgroundColor = this.backgroundColor;
     let textColor = this.color;
     let borderColor;
@@ -345,7 +394,7 @@ class SequenceTranslation extends CGObject {
     const ctx = this.canvas.context('map');
     const origin = this.canvas.pointForBp(start + 1, centerOffset);
     ctx.fillStyle = textColor.rgbaString;
-    ctx.fillText(aminoAcid, origin.x, origin.y + (this.font.height * scaleFactor * 0.35));
+    ctx.fillText(aminoAcid, origin.x, origin.y);
   }
 
   draw(visibleRange, backboneCenterOffset, pixelsPerBp) {
@@ -353,23 +402,22 @@ class SequenceTranslation extends CGObject {
     if (!scaleFactor || !visibleRange) { return; }
 
     const codonTable = this.viewer.codonTables.byID(this.geneticCode) || this.viewer.codonTables.byID(11);
-    const laneHeight = this.laneHeight * scaleFactor;
-    const laneStep = (this.laneHeight + this.laneSpacing) * scaleFactor;
-    const sequenceHalfThickness = this.sequence.baseThickness / 2 * scaleFactor;
+    const layout = this._layoutForScale(scaleFactor);
     const contigs = this.sequence.contigsForMapRange(visibleRange);
     const ctx = this.canvas.context('map');
 
     ctx.save();
     ctx.font = this.font.cssScaled(scaleFactor);
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
+    ctx.textBaseline = 'middle';
     for (const contig of contigs) {
       const segments = this._visibleContigSegments(contig, visibleRange);
       for (const strand of [1, -1]) {
-        for (let frame = 1; frame <= 3; frame++) {
-          const centerOffset = backboneCenterOffset + strand * (sequenceHalfThickness + (laneHeight / 2) + this.laneSpacing * scaleFactor + ((frame - 1) * laneStep));
+        for (let frame = 1; frame <= this.lanesPerStrand; frame++) {
+          const laneCenterOffset = layout.firstLaneCenterOffset + ((frame - 1) * layout.laneStep);
+          const centerOffset = backboneCenterOffset + (strand * laneCenterOffset);
           this._forEachCodon(contig, segments, strand, frame, codonTable, (start, codon, aminoAcid, isStart, isStop) => {
-            this._drawCodon(start, aminoAcid, isStart, isStop, centerOffset, laneHeight, scaleFactor);
+            this._drawCodon(start, aminoAcid, isStart, isStop, centerOffset, layout.laneHeight);
           });
         }
       }
