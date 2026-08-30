@@ -294,6 +294,7 @@ clearBtn.addEventListener('click', (e) => {
 
 const translationsCheckbox = document.getElementById('zoom-detail-translations');
 const tangentialRulerCheckbox = document.getElementById('zoom-detail-ruler');
+const featureDirectionsCheckbox = document.getElementById('zoom-detail-feature-directions');
 const translationEdgePaddingInput = document.getElementById('zoom-detail-edge-padding');
 const featureLabelModeSelect = document.getElementById('zoom-detail-label-mode');
 const featureTrackSelect = document.getElementById('zoom-detail-track');
@@ -349,6 +350,7 @@ function syncZoomDetailControls() {
   translationEdgePaddingInput.value = cgv.sequence.translation.edgePadding;
   translationEdgePaddingInput.disabled = !cgv.sequence.translation.visible;
   tangentialRulerCheckbox.checked = cgv.ruler.labelPosition === 'outer' && cgv.ruler.labelStyle === 'tangential';
+  featureDirectionsCheckbox.checked = cgv.settings.showFeatureDirectionIndicators;
   featureLabelModeSelect.value = cgv.annotation.labelPosition;
   syncFeatureTrackControls();
   shrinkInlineLabelsCheckbox.checked = cgv.annotation.inlineLabelAllowShrinking;
@@ -412,6 +414,10 @@ tangentialRulerCheckbox.addEventListener('change', (e) => {
     {labelPosition: 'inner', labelStyle: 'default'}
   );
   cgv.draw();
+});
+
+featureDirectionsCheckbox.addEventListener('change', (e) => {
+  cgv.settings.update({showFeatureDirectionIndicators: e.target.checked});
 });
 
 featureLabelModeSelect.addEventListener('change', (e) => {

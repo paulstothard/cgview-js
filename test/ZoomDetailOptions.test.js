@@ -30,6 +30,34 @@ describe('Zoom detail options', () => {
     expect(cgv.ruler.labelStyle).toBe('default');
   });
 
+  test('keeps feature direction indicators opt-in and serializes the setting', () => {
+    const legacyViewer = new Viewer('#map');
+    expect(legacyViewer.settings.showFeatureDirectionIndicators).toBe(false);
+
+    document.body.innerHTML = '<div id="map-enabled"></div>';
+    const enabledViewer = new Viewer('#map-enabled', {
+      settings: {showFeatureDirectionIndicators: true},
+    });
+    expect(enabledViewer.settings.showFeatureDirectionIndicators).toBe(true);
+    expect(enabledViewer.io.toJSON().cgview.settings.showFeatureDirectionIndicators).toBe(true);
+
+    enabledViewer.settings.update({showFeatureDirectionIndicators: false});
+    expect(enabledViewer.settings.showFeatureDirectionIndicators).toBe(false);
+  });
+
+  test('redraws a direction-indicator update only where it can be visible', () => {
+    const cgv = new Viewer('#map');
+    const drawFull = jest.spyOn(cgv, 'drawFull').mockImplementation(() => {});
+    const detailReadable = jest.spyOn(cgv.sequence, 'isDetailReadable').mockReturnValue(false);
+
+    cgv.settings.update({showFeatureDirectionIndicators: true});
+    expect(drawFull).not.toHaveBeenCalled();
+
+    detailReadable.mockReturnValue(true);
+    cgv.settings.update({showFeatureDirectionIndicators: false});
+    expect(drawFull).toHaveBeenCalledTimes(1);
+  });
+
   test('fits inline labels by shrinking to the configured floor', () => {
     const cgv = new Viewer('#map', {
       sequence: {length: 1000},

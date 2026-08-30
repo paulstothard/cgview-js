@@ -324,13 +324,19 @@ class Slot extends CGObject {
           // Special case where we draw with features sorted by score (draw highest score last)
           const sortedFeatures = this._featureNCList.find(start, stop, step).sort((a, b) => (a.score - b.score) || (a.length - b.length) );
           for (const feature of sortedFeatures) {
-            feature.draw('map', slotCenterOffset, slotThickness, range, {showShading: showShading});
+            feature.draw('map', slotCenterOffset, slotThickness, range, {
+              showShading: showShading,
+              showDirectionIndicators: !fast,
+            });
             drawnFeatures.push(feature);
           }
         } else {
           // Draw by position (more efficient)
           this._featureNCList.run(start, stop, step, (feature) => {
-            feature.draw('map', slotCenterOffset, slotThickness, range, {showShading: showShading});
+            feature.draw('map', slotCenterOffset, slotThickness, range, {
+              showShading: showShading,
+              showDirectionIndicators: !fast,
+            });
             drawnFeatures.push(feature);
           });
         }

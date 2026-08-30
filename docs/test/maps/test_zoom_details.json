@@ -7,6 +7,7 @@
       "geneticCode": 11,
       "backgroundColor": "white",
       "showShading": true,
+      "showFeatureDirectionIndicators": true,
       "showBorder": false,
       "arrowHeadLength": 0.25,
       "initialMapThicknessProportion": 0.16,

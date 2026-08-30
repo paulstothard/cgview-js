@@ -210,4 +210,104 @@ describe('Feature', () => {
 
   });
 
+  describe('base-detail direction indicators', () => {
+
+    let viewer;
+    let visibleRange;
+
+    beforeEach(() => {
+      viewer = new Viewer('#map', {
+        sequence: {seq: 'ATG'.repeat(120)},
+        settings: {showFeatureDirectionIndicators: true},
+        legend: {items: [{name: 'Feature', swatchColor: 'blue', decoration: 'arrow'}]},
+      });
+      visibleRange = new CGRange(viewer.sequence.mapContig, 20, 120);
+      jest.spyOn(viewer.sequence, 'isDetailReadable').mockReturnValue(true);
+    });
+
+    test('draws visible direct and reverse indicators with feature-derived colors', () => {
+      const directFeature = viewer.addFeatures([
+        {name: 'direct', start: 10, stop: 150, strand: 1, legend: 'Feature'},
+      ])[0];
+      const reverseFeature = viewer.addFeatures([
+        {name: 'reverse', start: 160, stop: 300, strand: -1, legend: 'Feature'},
+      ])[0];
+      const drawIndicators = jest.spyOn(viewer.canvas, 'drawFeatureDirectionIndicators')
+        .mockImplementation(() => {});
+
+      directFeature.drawRange(directFeature.mapRange, 'map', 100, 20, visibleRange);
+      reverseFeature.drawRange(reverseFeature.mapRange, 'map', 100, 20,
+        new CGRange(viewer.sequence.mapContig, 180, 260));
+
+      expect(drawIndicators).toHaveBeenNthCalledWith(1, expect.objectContaining({
+        start: 20,
+        stop: 120,
+        color: directFeature.color.rgbaString,
+        direction: 1,
+      }));
+      expect(drawIndicators).toHaveBeenNthCalledWith(2, expect.objectContaining({
+        start: 180,
+        stop: 260,
+        color: reverseFeature.color.rgbaString,
+        direction: -1,
+      }));
+    });
+
+    test('skips indicators for fast draws, overlays, and unreadable detail', () => {
+      const feature = viewer.addFeatures([
+        {name: 'direct', start: 10, stop: 150, strand: 1, legend: 'Feature'},
+      ])[0];
+      const drawIndicators = jest.spyOn(viewer.canvas, 'drawFeatureDirectionIndicators')
+        .mockImplementation(() => {});
+
+      feature.drawRange(feature.mapRange, 'map', 100, 20, visibleRange, {showDirectionIndicators: false});
+      feature.drawRange(feature.mapRange, 'ui', 100, 20, visibleRange);
+      viewer.sequence.isDetailReadable.mockReturnValue(false);
+      feature.drawRange(feature.mapRange, 'map', 100, 20, visibleRange);
+
+      expect(drawIndicators).not.toHaveBeenCalled();
+    });
+
+    test('draws chevron tips in the requested map direction and inside the feature width', () => {
+      const canvas = viewer.canvas;
+      const context = canvas.context('map');
+      jest.spyOn(canvas, 'pixelsPerBp').mockReturnValue(10);
+      jest.spyOn(canvas, 'pointForBp').mockImplementation((bp, centerOffset) => ({
+        x: bp * 10,
+        y: centerOffset,
+      }));
+
+      context.moveTo.mockClear();
+      context.lineTo.mockClear();
+      canvas.drawFeatureDirectionIndicators({
+        start: 10,
+        stop: 40,
+        centerOffset: 100,
+        color: 'rgba(32,116,174,0.86)',
+        width: 20,
+        direction: 1,
+      });
+      const directTail = context.moveTo.mock.calls[0];
+      const directTip = context.lineTo.mock.calls[0];
+      expect(directTip[0]).toBeGreaterThan(directTail[0]);
+      expect(Math.abs(directTail[1] - 100)).toBeLessThan(10);
+
+      context.moveTo.mockClear();
+      context.lineTo.mockClear();
+      canvas.drawFeatureDirectionIndicators({
+        start: 10,
+        stop: 40,
+        centerOffset: 100,
+        color: 'rgba(68,150,93,0.9)',
+        width: 20,
+        direction: -1,
+      });
+      const reverseTail = context.moveTo.mock.calls[0];
+      const reverseTip = context.lineTo.mock.calls[0];
+      expect(reverseTip[0]).toBeLessThan(reverseTail[0]);
+      expect(Math.abs(reverseTail[1] - 100)).toBeLessThan(10);
+    });
+
+  });
+
 });

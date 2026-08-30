@@ -550,6 +550,77 @@ class Canvas {
   }
 
   /**
+   * Draw sparse chevrons inside a visible feature segment. Marker spacing is
+   * calculated in screen pixels and aligned to map coordinates, so panning
+   * does not make the pattern drift. One canvas path is used per segment to
+   * keep the base-detail rendering cost small.
+   * @param {Object} options - Direction-indicator drawing options.
+   * @private
+   */
+  drawFeatureDirectionIndicators(options = {}) {
+    const {
+      layer = 'map',
+      start,
+      stop,
+      centerOffset,
+      color,
+      width,
+      direction = 1,
+    } = options;
+    const pixelsPerBp = this.pixelsPerBp(centerOffset);
+    if (!Number.isFinite(pixelsPerBp) || pixelsPerBp <= 0 || start > stop || width < 10) {
+      return;
+    }
+
+    const markerLengthPixels = Math.min(12, Math.max(7, width * 0.45));
+    const markerHalfHeight = Math.min(4.5, width * 0.18);
+    const spacingPixels = Math.max(32, Math.min(54, width * 1.2));
+    const edgePaddingPixels = Math.max(markerLengthPixels, width * this.viewer.settings.arrowHeadLength);
+    const markerHalfLengthBp = markerLengthPixels / (2 * pixelsPerBp);
+    const spacingBp = spacingPixels / pixelsPerBp;
+    const edgePaddingBp = edgePaddingPixels / pixelsPerBp;
+    const minimumCenter = (start - 0.5) + edgePaddingBp + markerHalfLengthBp;
+    const maximumCenter = (stop + 0.5) - edgePaddingBp - markerHalfLengthBp;
+    if (minimumCenter > maximumCenter) { return; }
+
+    // Anchor markers to the map coordinate system instead of to the clipped
+    // viewport edge. This keeps the same feature pattern in place while panning.
+    let centerBp = Math.ceil(minimumCenter / spacingBp) * spacingBp;
+    if (centerBp > maximumCenter) { return; }
+
+    const indicatorColor = new Color(color);
+    indicatorColor.highlight(0.18);
+    indicatorColor.opacity = Math.min(0.28, Math.max(0.18, indicatorColor.opacity * 0.3));
+
+    const ctx = this.context(layer);
+    ctx.save();
+    ctx.beginPath();
+    ctx.strokeStyle = indicatorColor.rgbaString;
+    ctx.lineWidth = Math.min(1.5, Math.max(1, width * 0.05));
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // A visible canvas cannot contain enough markers to approach this cap in
+    // normal use; it protects custom/export layouts with extreme dimensions.
+    const maximumIndicators = 256;
+    let indicatorCount = 0;
+    while (centerBp <= maximumCenter && indicatorCount < maximumIndicators) {
+      const tailBp = centerBp - (direction * markerHalfLengthBp);
+      const tipBp = centerBp + (direction * markerHalfLengthBp);
+      const outerTail = this.pointForBp(tailBp, centerOffset + markerHalfHeight);
+      const tip = this.pointForBp(tipBp, centerOffset);
+      const innerTail = this.pointForBp(tailBp, centerOffset - markerHalfHeight);
+      ctx.moveTo(outerTail.x, outerTail.y);
+      ctx.lineTo(tip.x, tip.y);
+      ctx.lineTo(innerTail.x, innerTail.y);
+      centerBp += spacingBp;
+      indicatorCount++;
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /**
    * This method adds a path to the canvas and uses the underlying Layout for the actual drawing.
    * For circular layouts the path is usually an arc, however, if the zoomFactor is very large,
    * the arc is added as a straight line.

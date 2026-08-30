@@ -118,6 +118,12 @@ yield to the sequence rows. Overlapping inline labels use the same favorite-then
 length priority as external labels. In `both` mode, labels that cannot be placed
 inline remain eligible for external placement.
 
+Set `settings.showFeatureDirectionIndicators` to `true` to draw sparse,
+low-contrast chevrons inside visible features once nucleotide detail is
+readable. Their color is derived from each feature color, and direct and
+reverse strands point in opposite map directions. The default is `false`, so
+existing JSON maps retain their previous appearance.
+
 ```json
 {
     "cgview": {
@@ -131,6 +137,7 @@ inline remain eligible for external placement.
             "geneticCode": "11",
             "backgroundColor": "rgba(255,255,255,1)",
             "showShading": true,
+            "showFeatureDirectionIndicators": false,
             "showBorder": false,
             "borderColor": "rgba(0,0,0,1)",
             "borderThickness": 1.5,

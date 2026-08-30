@@ -778,6 +778,21 @@ class Feature extends CGObject {
     return decoration;
   }
 
+  /**
+   * Direction indicators are a base-detail aid, not part of the feature's
+   * overview geometry. Keeping the gate here avoids per-feature marker work in
+   * fast draws and on maps that do not contain an actual sequence.
+   * @private
+   */
+  _shouldDrawDirectionIndicators(layer, width, options) {
+    return layer === 'map' &&
+      options.showDirectionIndicators !== false &&
+      this.viewer.settings.showFeatureDirectionIndicators &&
+      this.sequence.hasSeq &&
+      this.sequence.isDetailReadable() &&
+      width >= 10;
+  }
+
   drawRange(range, layer, slotCenterOffset, slotThickness, visibleRange, options = {}) {
     const drawSegments = this._drawSegmentsForRange(range, visibleRange);
     if (drawSegments.length === 0) { return; }
@@ -798,6 +813,23 @@ class Feature extends CGObject {
         showShading, minArcLength,
         selected: this.selected,
       });
+    }
+
+    if (this._shouldDrawDirectionIndicators(layer, width, options)) {
+      // The body uses a small offscreen margin so arrowheads remain stable,
+      // whereas repeated indicators are limited to the true visible range.
+      const visibleSegments = this._drawSegmentsForRange(range, visibleRange, 0);
+      for (const segment of visibleSegments) {
+        canvas.drawFeatureDirectionIndicators({
+          layer,
+          start: segment[0],
+          stop: segment[1],
+          centerOffset,
+          color: color.rgbaString,
+          width,
+          direction: this.isDirect() ? 1 : -1,
+        });
+      }
     }
   }
 
