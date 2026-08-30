@@ -27,6 +27,33 @@ describe('Viewer', () => {
     expect(cgv.features().length).toBe(1);
   });
 
+  test('debounces full draws until interaction rendering has settled', () => {
+    jest.useFakeTimers();
+    try {
+      const cgv = new Viewer('#map');
+      const drawFull = jest.spyOn(cgv.layout, 'drawFull').mockImplementation(() => {});
+      jest.spyOn(cgv.layout, 'drawFast').mockImplementation(() => {});
+
+      cgv._scheduleFullDraw(80);
+      jest.advanceTimersByTime(40);
+      cgv._scheduleFullDraw(80);
+      jest.advanceTimersByTime(79);
+      expect(drawFull).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(1);
+      jest.runOnlyPendingTimers();
+      expect(drawFull).toHaveBeenCalledTimes(1);
+
+      cgv._scheduleFullDraw(80);
+      cgv.drawFast();
+      jest.advanceTimersByTime(100);
+      jest.runOnlyPendingTimers();
+      expect(drawFull).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   describe('plugins option', () => {
 
     test('installs a single custom plugin', () => {

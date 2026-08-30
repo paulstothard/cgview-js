@@ -1,4 +1,5 @@
 import Viewer from '../src/Viewer';
+import utils from '../src/Utils';
 
 describe('Plot rendering', () => {
 
@@ -30,12 +31,15 @@ describe('Plot rendering', () => {
 
     pixelsPerBp.mockReturnValue(0.2);
     expect(renderer._plotBinSize(cgv.canvas, 100)).toBe(4);
+    expect(renderer._plotBinSize(cgv.canvas, 100, true)).toBe(8);
 
     pixelsPerBp.mockReturnValue(0.5);
     expect(renderer._plotBinSize(cgv.canvas, 100)).toBe(2);
+    expect(renderer._plotBinSize(cgv.canvas, 100, true)).toBe(4);
 
     pixelsPerBp.mockReturnValue(4);
     expect(renderer._plotBinSize(cgv.canvas, 100)).toBe(1);
+    expect(renderer._plotBinSize(cgv.canvas, 100, true)).toBe(1);
   });
 
   test('aggregates plot intervals using genomic overlap rather than sample count', () => {
@@ -45,6 +49,16 @@ describe('Plot rendering', () => {
     expect(samples.map(sample => sample.bp)).toEqual([1, 5, 13, 17]);
     expect(samples[1]).toEqual({bp: 5, mean: 0.5, min: 0, max: 1});
     expect(samples[2]).toEqual({bp: 13, mean: -0.25, min: -1, max: 0.5});
+  });
+
+  test('streams across visible scores instead of searching once per bin', () => {
+    const {plot} = createPlot();
+    const indexLookup = jest.spyOn(utils, 'indexOfValue');
+
+    plot._renderer._samplesForSegment(1, 32, 1);
+
+    expect(indexLookup).toHaveBeenCalledTimes(3);
+    indexLookup.mockRestore();
   });
 
   test('keeps internal bin positions stable when the visible range is panned', () => {
@@ -105,6 +119,19 @@ describe('Plot rendering', () => {
     expect(context.stroke).toHaveBeenCalledTimes(1);
     expect(context.lineTo.mock.calls.length).toBeGreaterThan(3);
     expect(context.lineTo.mock.calls.length).toBeLessThan(30);
+  });
+
+  test('uses only the coarser mean fill during a fast draw', () => {
+    const {cgv, plot} = createPlot();
+    jest.spyOn(cgv.canvas, 'pixelsPerBp').mockReturnValue(0.2);
+    const context = cgv.canvas.context('map');
+    context.fill.mockClear();
+    context.stroke.mockClear();
+
+    plot.draw(cgv.canvas, 100, 40, true, {start: 1, stop: 17});
+
+    expect(context.fill).toHaveBeenCalledTimes(1);
+    expect(context.stroke).not.toHaveBeenCalled();
   });
 
   test('retains stepped geometry when a plot explicitly uses bar type', () => {

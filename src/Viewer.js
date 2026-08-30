@@ -1237,11 +1237,55 @@ class Viewer {
   }
 
   drawFull() {
+    this._cancelScheduledFullDraw();
     this.layout.drawFull();
   }
 
   drawFast() {
+    // Any fast draw means the view is still changing. A full draw queued for
+    // the previous interaction state is now stale and must not interrupt it.
+    this._cancelScheduledFullDraw();
     this.layout.drawFast();
+  }
+
+  /**
+   * Queue a full-quality draw after an interaction has remained settled for a
+   * short period. Repeated calls replace the pending draw, so rapid wheel and
+   * drag gestures continue to use the fast renderer without accumulating
+   * expensive full redraws.
+   * @private
+   */
+  _scheduleFullDraw(delay = 80) {
+    this._cancelScheduledFullDraw();
+    this._fullDrawTimeoutID = setTimeout(() => {
+      this._fullDrawTimeoutID = undefined;
+      const draw = () => {
+        this._fullDrawFrameID = undefined;
+        this.drawFull();
+      };
+      if (typeof requestAnimationFrame === 'function') {
+        this._fullDrawFrameID = requestAnimationFrame(draw);
+      } else {
+        draw();
+      }
+    }, Math.max(0, delay));
+  }
+
+  /**
+   * Cancel a full draw that has not started yet.
+   * @private
+   */
+  _cancelScheduledFullDraw() {
+    if (this._fullDrawTimeoutID !== undefined) {
+      clearTimeout(this._fullDrawTimeoutID);
+      this._fullDrawTimeoutID = undefined;
+    }
+    if (this._fullDrawFrameID !== undefined) {
+      if (typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(this._fullDrawFrameID);
+      }
+      this._fullDrawFrameID = undefined;
+    }
   }
 
   drawExport() {
@@ -1430,8 +1474,10 @@ class Viewer {
           self.trigger('zoom');
           self.drawFast();
         };
+      }).on('start', function() {
+        self._cancelScheduledFullDraw();
       }).on('end', function() {
-        callback ? callback.call() : self.drawFull();
+        callback ? callback.call() : self._scheduleFullDraw();
       });
   }
 
@@ -1597,13 +1643,14 @@ class Viewer {
           self.drawFast();
         };
       }).on('start', function() {
+        self._cancelScheduledFullDraw();
         self.trigger('zoom-start');
       }).on('end', function() {
         self.trigger('zoom-end');
         if (callback) {
           callback.call();
         } else {
-          self.drawFull();
+          self._scheduleFullDraw();
         }
       });
   }

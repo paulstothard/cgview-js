@@ -418,7 +418,7 @@ class Plot extends CGObject {
       return;
     }
 
-    this._renderer.draw(canvas, slotRadius, slotThickness, range);
+    this._renderer.draw(canvas, slotRadius, slotThickness, range, fast);
     // console.log("Plot Time: '" + utils.elapsedTime(startTime) );
   }
 

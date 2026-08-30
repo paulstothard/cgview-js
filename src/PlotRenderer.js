@@ -39,23 +39,23 @@ class PlotRenderer {
   get scores() { return this.plot.scores; }
   get baseline() { return this.plot.baseline; }
 
-  draw(canvas, slotRadius, slotThickness, range) {
-    const geometry = this._plotGeometry(canvas, slotRadius, slotThickness, range);
+  draw(canvas, slotRadius, slotThickness, range, fast = false) {
+    const geometry = this._plotGeometry(canvas, slotRadius, slotThickness, range, fast);
     if (geometry.samples.length === 0) { return; }
     if (this.plot.colorNegative.rgbaString === this.plot.colorPositive.rgbaString) {
-      this._drawLinePath(canvas, geometry, this.plot.colorPositive);
+      this._drawLinePath(canvas, geometry, this.plot.colorPositive, undefined, fast);
     } else {
-      this._drawLinePath(canvas, geometry, this.plot.colorPositive, 'positive');
-      this._drawLinePath(canvas, geometry, this.plot.colorNegative, 'negative');
+      this._drawLinePath(canvas, geometry, this.plot.colorPositive, 'positive', fast);
+      this._drawLinePath(canvas, geometry, this.plot.colorNegative, 'negative', fast);
     }
   }
 
-  _plotGeometry(canvas, slotRadius, slotThickness, range) {
+  _plotGeometry(canvas, slotRadius, slotThickness, range, fast = false) {
     const axisRange = this.plot.axisMax - this.plot.axisMin;
     const safeAxisRange = Number.isFinite(axisRange) && axisRange > 0 ? axisRange : 1;
     const baselineRadius = slotRadius - (slotThickness / 2) +
       (slotThickness * (this.baseline - this.plot.axisMin) / safeAxisRange);
-    const binSize = this._plotBinSize(canvas, slotRadius);
+    const binSize = this._plotBinSize(canvas, slotRadius, fast);
     return {
       samples: this._samplesForRange(range, binSize),
       start: range.start,
@@ -66,11 +66,13 @@ class PlotRenderer {
     };
   }
 
-  _plotBinSize(canvas, slotRadius) {
+  _plotBinSize(canvas, slotRadius, fast = false) {
     const pixelsPerBp = canvas.pixelsPerBp(slotRadius);
     if (!Number.isFinite(pixelsPerBp) || pixelsPerBp <= 0) { return 1; }
     const bpPerPixel = 1 / pixelsPerBp;
-    return bpPerPixel > 1 ? Math.pow(2, Math.floor(Math.log2(bpPerPixel))) : 1;
+    if (bpPerPixel <= 1) { return 1; }
+    const fullBinSize = Math.pow(2, Math.floor(Math.log2(bpPerPixel)));
+    return fast ? fullBinSize * 2 : fullBinSize;
   }
 
   _samplesForRange(range, binSize) {
@@ -106,6 +108,7 @@ class PlotRenderer {
     const startSummary = this._scoreSummary(start, start);
     samples.push({bp: start, ...startSummary});
 
+    let scoreIndex = utils.indexOfValue(this.positions, start, false);
     const firstBin = Math.floor((start - 1) / binSize);
     const lastBin = Math.floor((stop - 1) / binSize);
     for (let bin = firstBin; bin <= lastBin; bin++) {
@@ -114,7 +117,9 @@ class PlotRenderer {
       if (binStop <= binStart) { continue; }
       const bp = (binStart + binStop) / 2;
       if (bp <= start || bp >= stop) { continue; }
-      samples.push({bp, ...this._scoreSummary(binStart, binStop)});
+      const summary = this._scoreSummaryFromIndex(binStart, binStop, scoreIndex);
+      scoreIndex = summary.index;
+      samples.push({bp, mean: summary.mean, min: summary.min, max: summary.max});
     }
 
     const stopSummary = this._scoreSummary(stop, stop);
@@ -123,10 +128,19 @@ class PlotRenderer {
   }
 
   _scoreSummary(start, stop) {
-    let index = utils.indexOfValue(this.positions, start, false);
+    const index = utils.indexOfValue(this.positions, start, false);
+    const summary = this._scoreSummaryFromIndex(start, stop, index);
+    return {mean: summary.mean, min: summary.min, max: summary.max};
+  }
+
+  _scoreSummaryFromIndex(start, stop, startIndex) {
+    let index = startIndex;
+    while (index < this.scores.length - 1 && this.positions[index + 1] <= start) {
+      index++;
+    }
     const initialScore = this._validScore(this.scores[index]);
     if (stop <= start) {
-      return {mean: initialScore, min: initialScore, max: initialScore};
+      return {mean: initialScore, min: initialScore, max: initialScore, index};
     }
 
     let cursor = start;
@@ -162,6 +176,7 @@ class PlotRenderer {
       mean: totalWeight > 0 ? weightedTotal / totalWeight : initialScore,
       min: minimum,
       max: maximum,
+      index,
     };
   }
 
@@ -170,24 +185,28 @@ class PlotRenderer {
     return Number.isFinite(numericScore) ? numericScore : this.baseline;
   }
 
-  _drawLinePath(canvas, geometry, color, orientation) {
+  _drawLinePath(canvas, geometry, color, orientation, fast = false) {
     const ctx = canvas.context('map');
     const fillColor = color.copy();
     fillColor.opacity *= 0.92;
-    const envelopeColor = color.copy();
-    envelopeColor.opacity *= 0.1;
-    const contourColor = color.copy();
-    if (contourColor.relativeLuminance < 0.08) {
-      contourColor.lighten(0.12);
-    } else {
-      contourColor.darken(0.12);
-    }
-    contourColor.opacity *= 0.9;
 
     ctx.save();
-    this._drawPlotEnvelope(ctx, canvas, geometry, envelopeColor, orientation);
+    if (!fast) {
+      const envelopeColor = color.copy();
+      envelopeColor.opacity *= 0.1;
+      this._drawPlotEnvelope(ctx, canvas, geometry, envelopeColor, orientation);
+    }
     this._drawPlotFill(ctx, canvas, geometry, fillColor, orientation);
-    this._drawPlotContour(ctx, canvas, geometry, contourColor, orientation);
+    if (!fast) {
+      const contourColor = color.copy();
+      if (contourColor.relativeLuminance < 0.08) {
+        contourColor.lighten(0.12);
+      } else {
+        contourColor.darken(0.12);
+      }
+      contourColor.opacity *= 0.9;
+      this._drawPlotContour(ctx, canvas, geometry, contourColor, orientation);
+    }
     ctx.restore();
   }
 

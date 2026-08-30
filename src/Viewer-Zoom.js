@@ -67,6 +67,7 @@ export default function initializeZooming(viewer) {
   }
 
   function zoomstart() {
+    viewer._cancelScheduledFullDraw();
     viewer.trigger('zoom-start');
     viewer.highlighter.hidePopoverBox();
   }
@@ -119,6 +120,6 @@ export default function initializeZooming(viewer) {
 
   function zoomend() {
     viewer.trigger('zoom-end');
-    viewer.drawFull();
+    viewer._scheduleFullDraw();
   }
 };
