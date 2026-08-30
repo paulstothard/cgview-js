@@ -109,7 +109,9 @@ Inline feature labels are fit-tested at every zoom level by default; set
 `labelPosition` to `external`, `inline`, `both`, or `none`. With `both`, labels
 that fit inside features are drawn inline and the remainder use external
 labels. Enable or disable inline shrinking and ellipsis truncation independently
-with `inlineLabelAllowShrinking` and `inlineLabelAllowTruncation`.
+with `inlineLabelAllowShrinking` and `inlineLabelAllowTruncation`. When no
+annotation or inline-label color is supplied, the viewer selects black or white
+using the contrast of the feature color composited over the map background.
 
 ```json
 {

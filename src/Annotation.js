@@ -46,7 +46,7 @@ import FeatureLabelRenderer from './FeatureLabelRenderer';
  * Attribute                        | Type      | Description
  * ---------------------------------|-----------|------------
  * [font](#font)                    | String    | A string describing the font [Default: 'monospace, plain, 12']. See {@link Font} for details.
- * [color](#color)                  | String   | A string describing the color [Default: undefined]. If the color is undefined, the legend color for the feature will be used. See {@link Color} for details.
+ * [color](#color)                  | String   | A string describing the color of all labels [Default: undefined]. When undefined, external labels use the feature legend color and inline labels choose black or white for contrast. See {@link Color} for details.
  * [onlyDrawFavorites](#onlyDrawFavorites) | Boolean   | Only draw labels for features that are favorited [Default: false]
  * [labelPlacement](#labelPlacement) | String   | The label placement method for positioning labels. Choices: 'default', 'angled' [Default: 'default']
  * [labelPosition](#labelPosition) | String | Where feature labels are drawn. Choices: 'external', 'inline', 'both', 'none'. With 'both', external labels are fallbacks for labels that do not fit inline [Default: 'external']
@@ -55,7 +55,7 @@ import FeatureLabelRenderer from './FeatureLabelRenderer';
  * [inlineLabelMinZoomFactor](#inlineLabelMinZoomFactor) | Number | Optional minimum zoom factor for inline labels [Default: 1]
  * [inlineLabelMinFontSize](#inlineLabelMinFontSize) | Number | Smallest permitted inline-label font in pixels [Default: 8]
  * [inlineLabelPadding](#inlineLabelPadding) | Number | Padding around inline labels in pixels [Default: 2]
- * [inlineLabelColor](#inlineLabelColor) | String | Inline-label color. When omitted, black or white is chosen for contrast.
+ * [inlineLabelColor](#inlineLabelColor) | String | Optional inline-label color override. When omitted, `color` is used if defined; otherwise black or white is selected for contrast against the rendered feature color.
  * [visible](CGObject.html#visible) | Boolean   | Labels are visible [Default: true]
  * [meta](CGObject.html#meta)       | Object    | [Meta data](tutorial-meta.html) for Annotation
  *
@@ -527,8 +527,15 @@ class Annotation extends CGObject {
    * Invert color
    */
   invertColors() {
+    const attributes = {};
     if (this.color) {
-      this.update({ color: this.color.invert().rgbaString });
+      attributes.color = this.color.invert().rgbaString;
+    }
+    if (this.inlineLabelColor) {
+      attributes.inlineLabelColor = this.inlineLabelColor.invert().rgbaString;
+    }
+    if (Object.keys(attributes).length > 0) {
+      this.update(attributes);
     }
   }
 

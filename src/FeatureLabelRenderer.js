@@ -23,6 +23,8 @@ import Color from './Color';
 
 const ELLIPSIS = '…';
 const MIN_TRUNCATED_CHARACTERS = 3;
+const OPAQUE_WHITE = new Color('white');
+const MAX_COLOR_CACHE_SIZE = 128;
 
 /**
  * Fits and draws feature names inside their rendered feature arcs. This class
@@ -34,6 +36,7 @@ class FeatureLabelRenderer {
   constructor(annotation) {
     this.annotation = annotation;
     this._glyphWidthCache = new WeakMap();
+    this._automaticColorCache = new Map();
   }
 
   get viewer() {
@@ -100,10 +103,25 @@ class FeatureLabelRenderer {
     if (this.annotation.inlineLabelColor) {
       return this.annotation.inlineLabelColor;
     }
-    const rgb = feature.color.rgb;
-    if (!rgb) { return new Color('black'); }
-    const luminance = (0.299 * rgb.r) + (0.587 * rgb.g) + (0.114 * rgb.b);
-    return new Color(luminance > 150 ? 'rgba(0,0,0,0.86)' : 'rgba(255,255,255,0.96)');
+    if (this.annotation.color) {
+      return this.annotation.color;
+    }
+
+    // Feature colors can be translucent, so choose text against the color that
+    // is actually visible after the feature is composited over the map.
+    const featureColor = feature.color;
+    const backgroundColor = this.viewer.settings.backgroundColor;
+    const cacheKey = `${featureColor.rgbaString}\n${backgroundColor.rgbaString}`;
+    let color = this._automaticColorCache.get(cacheKey);
+    if (!color) {
+      const renderedColor = featureColor.compositeOver(backgroundColor).compositeOver(OPAQUE_WHITE);
+      color = renderedColor.contrastColor();
+      if (this._automaticColorCache.size >= MAX_COLOR_CACHE_SIZE) {
+        this._automaticColorCache.clear();
+      }
+      this._automaticColorCache.set(cacheKey, color);
+    }
+    return color;
   }
 
   _measurementFor(feature) {

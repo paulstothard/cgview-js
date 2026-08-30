@@ -73,6 +73,52 @@ describe('Zoom detail options', () => {
     expect(metrics.fontSize).toBeGreaterThanOrEqual(8);
   });
 
+  test('chooses inline label contrast from the composited feature and map colors', () => {
+    const cgv = new Viewer('#map', {
+      settings: {backgroundColor: 'white'},
+      annotation: {labelPosition: 'inline'},
+      legend: {items: [
+        {name: 'Transparent dark', swatchColor: 'rgba(0,0,0,0.2)'},
+        {name: 'Dark', swatchColor: '#205080'},
+      ]},
+      features: [
+        {name: 'light rendered surface', start: 100, stop: 300, legend: 'Transparent dark'},
+        {name: 'dark rendered surface', start: 400, stop: 600, legend: 'Dark'},
+      ],
+    });
+    const renderer = cgv.annotation._featureLabelRenderer;
+
+    expect(renderer._labelColor(cgv.features(1)).rgbaString).toBe('rgba(0,0,0,1)');
+    expect(renderer._labelColor(cgv.features(2)).rgbaString).toBe('rgba(255,255,255,1)');
+  });
+
+  test('uses explicit inline and general annotation colors before automatic contrast', () => {
+    document.body.innerHTML = '<div id="map-inline"></div><div id="map-general"></div>';
+    const inlineOverride = new Viewer('#map-inline', {
+      annotation: {labelPosition: 'inline', color: 'magenta', inlineLabelColor: 'yellow'},
+      features: [{name: 'feature', start: 100, stop: 300, legend: 'Feature'}],
+    });
+    const generalOverride = new Viewer('#map-general', {
+      annotation: {labelPosition: 'inline', color: 'magenta'},
+      features: [{name: 'feature', start: 100, stop: 300, legend: 'Feature'}],
+    });
+
+    expect(inlineOverride.annotation._featureLabelRenderer._labelColor(inlineOverride.features(1)).rgbaString)
+      .toBe('rgba(255,255,0,1)');
+    expect(generalOverride.annotation._featureLabelRenderer._labelColor(generalOverride.features(1)).rgbaString)
+      .toBe('rgba(255,0,255,1)');
+  });
+
+  test('inverts an explicit inline label color with the rest of the map palette', () => {
+    const cgv = new Viewer('#map', {
+      annotation: {labelPosition: 'inline', inlineLabelColor: 'black'},
+    });
+
+    cgv.annotation.invertColors();
+
+    expect(cgv.annotation.inlineLabelColor.rgbaString).toBe('rgba(255,255,255,1)');
+  });
+
   test('draws fitting inline labels on the zoom-detail map at overview', () => {
     const mapPath = path.join(process.cwd(), 'docs/test/maps/test_zoom_details.json');
     const json = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
