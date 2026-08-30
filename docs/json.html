@@ -118,6 +118,11 @@ yield to the sequence rows. Overlapping inline labels use the same favorite-then
 length priority as external labels. In `both` mode, labels that cannot be placed
 inline remain eligible for external placement.
 
+External feature labels use a rounded, background-colored text halo instead of
+a rectangular backing. Label lines are painted first, followed by the complete
+halo pass and then the text fills. External labels are composited above feature
+and plot tracks while ruler labels retain priority where the two systems meet.
+
 Enhanced ruler labels automatically receive a rounded protective outline. By
 default the halo uses the current map background, so it continues to work after
 background-color changes and color inversion. Use `labelHaloColor` for an

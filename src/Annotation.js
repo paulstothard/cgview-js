@@ -586,8 +586,19 @@ class Annotation extends CGObject {
     // ctx.fill();
   }
 
-  draw(innerCenterOffset, outerCenterOffset, fast) {
+  /**
+   * Clear draw-local inline-label placements before feature slots draw.
+   * External labels are painted later on the foreground layer.
+   * @private
+   */
+  prepareForDraw() {
     this._featureLabelRenderer.beginDraw();
+  }
+
+  draw(innerCenterOffset, outerCenterOffset, fast, layer = 'map', prepare = true) {
+    if (prepare) {
+      this.prepareForDraw();
+    }
     if (!['external', 'both'].includes(this.labelPosition)) {
       this._visibleLabels = new CGArray();
       return;
@@ -641,8 +652,8 @@ class Annotation extends CGObject {
 
     // Draw nonoverlapping labels
     const canvas = this.canvas;
-    const ctx = canvas.context('map');
-    let label, rect;
+    const ctx = canvas.context(layer);
+    let label;
     ctx.font = this.font.css; // TODO: move to loop, but only set if it changes
     ctx.textAlign = 'left';
     // ctx.textBaseline = 'top';
@@ -658,23 +669,28 @@ class Annotation extends CGObject {
       this.drawLabelLine(label, ctx);
     }
 
-    // Draw label text
-    const backgroundColor = this.viewer.settings.backgroundColor.copy();
-    backgroundColor.opacity = 0.75;
+    // Draw every protective stroke before any text fill. This keeps nearby
+    // halos from washing over already-filled glyphs and replaces the former
+    // translucent rectangular backing with a compact rounded outline.
+    ctx.strokeStyle = this.viewer.settings.backgroundColor.rgbaString;
+    ctx.lineWidth = 5;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.miterLimit = 2;
     for (let i = 0, len = this._visibleLabels.length; i < len; i++) {
       label = this._visibleLabels[i];
       // FIXME: it would be better to remove invisible labels before calculating position
       // - this works to remove label, but the space is not available for another label
-      // NOTE: Has this been fixed????????
+      if (!label.feature.visible) { continue; }
+      ctx.strokeText(label.name, label.rect.x, label.rect.bottom - 1);
+    }
+
+    // Fill text only after the complete halo pass.
+    for (let i = 0, len = this._visibleLabels.length; i < len; i++) {
+      label = this._visibleLabels[i];
       if (!label.feature.visible) { continue; }
       const color = this.color || label.feature.color;
-
-      ctx.fillStyle = backgroundColor.rgbaString;
-      rect = label.rect;
-      ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
-
       ctx.fillStyle = color.rgbaString;
-      // ctx.fillText(label.name, label.rect.x, label.rect.y);
       ctx.fillText(label.name, label.rect.x, label.rect.bottom - 1);
     }
 

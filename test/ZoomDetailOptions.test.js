@@ -94,19 +94,29 @@ describe('Zoom detail options', () => {
     expect(ctx.strokeText.mock.invocationCallOrder[0]).toBeLessThan(ctx.fillText.mock.invocationCallOrder[0]);
   });
 
-  test('draws the ruler on the foreground after slots and sequence data', () => {
+  test('draws protected map labels on the foreground after slots and sequence data', () => {
     const cgv = new Viewer('#map', {
       sequence: {length: 1000},
       ruler: {labelPosition: 'outer', labelStyle: 'curved'},
     });
     const drawSlots = jest.spyOn(cgv.layout, 'drawAllSlots').mockImplementation(() => {});
     const drawSequence = jest.spyOn(cgv.sequence, 'draw').mockImplementation(() => {});
+    const drawAnnotation = jest.spyOn(cgv.annotation, 'draw').mockImplementation(() => {});
     const drawRuler = jest.spyOn(cgv.ruler, 'draw').mockImplementation(() => {});
 
     cgv.layout.drawExport();
 
     expect(drawSlots.mock.invocationCallOrder[0]).toBeLessThan(drawRuler.mock.invocationCallOrder[0]);
     expect(drawSequence.mock.invocationCallOrder[0]).toBeLessThan(drawRuler.mock.invocationCallOrder[0]);
+    expect(drawSlots.mock.invocationCallOrder[0]).toBeLessThan(drawAnnotation.mock.invocationCallOrder[0]);
+    expect(drawSequence.mock.invocationCallOrder[0]).toBeLessThan(drawAnnotation.mock.invocationCallOrder[0]);
+    expect(drawAnnotation).toHaveBeenCalledWith(
+      expect.any(Number),
+      expect.any(Number),
+      false,
+      'foreground',
+      false
+    );
     expect(drawRuler).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), 'foreground');
   });
 
@@ -562,6 +572,35 @@ describe('Zoom detail options', () => {
 
     expect(cgv.annotation._visibleLabels.map(label => label.feature.name)).toContain('needs fallback');
     expect(cgv.annotation._visibleLabels.map(label => label.feature.name)).not.toContain('fits inline');
+  });
+
+  test('protects external labels with text halos instead of background rectangles', () => {
+    const cgv = new Viewer('#map', {
+      width: 800,
+      height: 600,
+      settings: {backgroundColor: '#f8fafc'},
+      sequence: {length: 1000},
+      annotation: {labelPosition: 'external'},
+      features: [{name: 'halo label', source: 'test', start: 100, stop: 300, legend: 'Feature'}],
+    });
+    cgv.addTracks([{dataType: 'feature', dataMethod: 'source', dataKeys: 'test', position: 'outside'}]);
+    jest.spyOn(cgv.canvas, 'visibleRangeForCenterOffset')
+      .mockReturnValue(new CGRange(cgv.sequence.mapContig, 1, 1000));
+    const ctx = cgv.canvas.context('map');
+    ctx.fillRect.mockClear();
+    ctx.strokeText.mockClear();
+    ctx.fillText.mockClear();
+
+    cgv.annotation.draw(100, 150, false);
+
+    expect(ctx.fillRect).not.toHaveBeenCalled();
+    expect(ctx.strokeText).toHaveBeenCalledWith('halo label', expect.any(Number), expect.any(Number));
+    expect(ctx.fillText).toHaveBeenCalledWith('halo label', expect.any(Number), expect.any(Number));
+    expect(Math.max(...ctx.strokeText.mock.invocationCallOrder))
+      .toBeLessThan(Math.min(...ctx.fillText.mock.invocationCallOrder));
+    expect(ctx.strokeStyle).toBe('#f8fafc');
+    expect(ctx.lineWidth).toBe(5);
+    expect(ctx.lineJoin).toBe('round');
   });
 
   test('applies onlyDrawFavorites to inline labels', () => {

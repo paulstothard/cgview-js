@@ -932,9 +932,10 @@ class Layout {
 
     // Divider rings
     viewer.dividers.draw();
-    // Labels
+    // Inline-label placement caches must be reset before feature slots draw.
+    // External labels themselves are painted later on the foreground layer.
     if (viewer.annotation.visible) {
-      viewer.annotation.draw(this.centerInsideOffset, this.centerOutsideOffset, fast);
+      viewer.annotation.prepareForDraw();
     }
 
     // Progess
@@ -961,7 +962,7 @@ class Layout {
     this.drawMapWithoutSlots(true);
     this.drawAllSlots(true);
     this.sequence.draw();
-    this.drawForeground();
+    this.drawForeground(true);
     // Debug
     if (this.viewer.debug) {
       this.viewer.debug.data.time.fastDraw = utils.elapsedTime(startTime);
@@ -975,14 +976,14 @@ class Layout {
     this._drawFullStartTime = new Date().getTime();
     this.drawSlotWithTimeOut(this);
     this.sequence.draw();
-    this.drawForeground();
+    this.drawForeground(false);
   }
 
   drawExport() {
     this.drawMapWithoutSlots();
     this.drawAllSlots(false);
     this.sequence.draw();
-    this.drawForeground();
+    this.drawForeground(false);
   }
 
   draw(fast) {
@@ -990,9 +991,21 @@ class Layout {
   }
 
   // Draw foreground layer (centerLine, map-based captions/legend)
-  drawForeground() {
+  drawForeground(fast = false) {
     const viewer = this.viewer;
     viewer.clear('foreground');
+    // External feature labels and their lines sit above map data. Ruler labels
+    // are drawn after them so coordinate text retains priority where the two
+    // systems meet.
+    if (viewer.annotation.visible) {
+      viewer.annotation.draw(
+        this.centerInsideOffset,
+        this.centerOutsideOffset,
+        fast,
+        'foreground',
+        false
+      );
+    }
     // Compact feature-track identifiers sit above map data but below captions
     // and legends, so those established foreground elements retain priority.
     this._trackLabelRenderer.draw();
