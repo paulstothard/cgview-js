@@ -40,7 +40,7 @@ import utils from './Utils';
  * [format](#format)                   | String    | The layout format of the map: circular, linear [Default: circular]
  * [backgroundColor](#backgroundColor) | String    | A string describing the background color of the map [Default: 'white']. See {@link Color} for details.
  * [showShading](#showShading)         | Boolean   | Should a shading effect be drawn on the features [Default: true]
- * [showFeatureDirectionIndicators](#showFeatureDirectionIndicators) | Boolean | Show subtle, repeated strand-direction indicators inside features when nucleotide detail is readable [Default: false]
+ * [showFeatureDirectionIndicators](#showFeatureDirectionIndicators) | Boolean | Show subtle, repeated strand-direction indicators inside features when nucleotide detail is readable [Default: true]
  * [showFeatureTrackLabels](#showFeatureTrackLabels) | Boolean | Show compact feature-track names when the map is zoomed in [Default: true]
  * [showBorder](#showBorder)           | Boolean   | Should a border be drawn on the features [Default: true]
  * [borderColor](#borderColor)         | String    | A string describing the border color of features [Default: 'rgba(0,0,0,1)']. See {@link Color} for details.
@@ -71,7 +71,7 @@ class Settings {
     this._geneticCode = utils.defaultFor(options.geneticCode, 11);
     this.arrowHeadLength = utils.defaultFor(options.arrowHeadLength, 0.3);
     this._showShading = utils.defaultFor(options.showShading, true);
-    this._showFeatureDirectionIndicators = utils.defaultFor(options.showFeatureDirectionIndicators, false);
+    this._showFeatureDirectionIndicators = utils.defaultFor(options.showFeatureDirectionIndicators, true);
     this._showFeatureTrackLabels = utils.defaultFor(options.showFeatureTrackLabels, true);
     this._showBorder = utils.defaultFor(options.showBorder, false);
     this._borderColor = new Color( utils.defaultFor(options.borderColor, 'rgba(0,0,0,1)') );
@@ -157,7 +157,7 @@ class Settings {
 
   /**
    * @member {Boolean} - Get or set whether subtle strand-direction indicators
-   * are drawn inside features when nucleotide detail is readable (Default: false).
+   * are drawn inside features when nucleotide detail is readable (Default: true).
    */
   get showFeatureDirectionIndicators() {
     return this._showFeatureDirectionIndicators;

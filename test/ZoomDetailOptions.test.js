@@ -209,19 +209,20 @@ describe('Zoom detail options', () => {
     expect(ctx.strokeText.mock.invocationCallOrder[0]).toBeLessThan(ctx.fillText.mock.invocationCallOrder[0]);
   });
 
-  test('keeps feature direction indicators opt-in and serializes the setting', () => {
+  test('enables feature direction indicators by default and serializes overrides', () => {
     const legacyViewer = new Viewer('#map');
-    expect(legacyViewer.settings.showFeatureDirectionIndicators).toBe(false);
+    expect(legacyViewer.settings.showFeatureDirectionIndicators).toBe(true);
+    expect(legacyViewer.io.toJSON().cgview.settings.showFeatureDirectionIndicators).toBe(true);
 
-    document.body.innerHTML = '<div id="map-enabled"></div>';
-    const enabledViewer = new Viewer('#map-enabled', {
-      settings: {showFeatureDirectionIndicators: true},
+    document.body.innerHTML = '<div id="map-disabled"></div>';
+    const disabledViewer = new Viewer('#map-disabled', {
+      settings: {showFeatureDirectionIndicators: false},
     });
-    expect(enabledViewer.settings.showFeatureDirectionIndicators).toBe(true);
-    expect(enabledViewer.io.toJSON().cgview.settings.showFeatureDirectionIndicators).toBe(true);
+    expect(disabledViewer.settings.showFeatureDirectionIndicators).toBe(false);
+    expect(disabledViewer.io.toJSON().cgview.settings.showFeatureDirectionIndicators).toBe(false);
 
-    enabledViewer.settings.update({showFeatureDirectionIndicators: false});
-    expect(enabledViewer.settings.showFeatureDirectionIndicators).toBe(false);
+    disabledViewer.settings.update({showFeatureDirectionIndicators: true});
+    expect(disabledViewer.settings.showFeatureDirectionIndicators).toBe(true);
   });
 
   test('redraws a direction-indicator update only where it can be visible', () => {
