@@ -155,8 +155,12 @@
               <option value='both'>Inline + external fallback</option>
               <option value='none'>Hidden</option>
             </select>
+            <label for='zoom-detail-track'>Feature track</label>
+            <select id='zoom-detail-track' class='form-select form-select-sm'></select>
             <label for='zoom-detail-track-position'>Feature track position</label>
             <select id='zoom-detail-track-position' class='form-select form-select-sm'>
+              <option value='outside'>Outside backbone</option>
+              <option value='inside'>Inside backbone</option>
               <option value='around'>Around backbone</option>
               <option value='along'>Along backbone</option>
             </select>
@@ -239,7 +243,7 @@
     <!-- Bootstrap JavaScript -->
     <script src="../scripts/bootstrap.min.js"></script>
 
-    <script src='test.js?v=feature-range-clipping-1'></script>
+    <script src='test.js?v=feature-track-controls-1'></script>
     <script src='../scripts/controls.js'></script>
 
   </body>

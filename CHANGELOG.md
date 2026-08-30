@@ -15,6 +15,7 @@
 - Added configurable ruler label side and tangential label orientation.
 - Added fit-aware inline feature labels with bounded font shrinking and independent external-label visibility.
 - Added a focused zoom-detail map and live controls to the test page.
+- Updated the test page to select and reposition feature tracks from any loaded map.
 - Fixed transient hover highlights and popovers remaining visible after the pointer leaves the Viewer.
 
 

@@ -296,6 +296,7 @@ const translationsCheckbox = document.getElementById('zoom-detail-translations')
 const tangentialRulerCheckbox = document.getElementById('zoom-detail-ruler');
 const translationEdgePaddingInput = document.getElementById('zoom-detail-edge-padding');
 const featureLabelModeSelect = document.getElementById('zoom-detail-label-mode');
+const featureTrackSelect = document.getElementById('zoom-detail-track');
 const featureTrackPositionSelect = document.getElementById('zoom-detail-track-position');
 const shrinkInlineLabelsCheckbox = document.getElementById('zoom-detail-label-shrink');
 const truncateInlineLabelsCheckbox = document.getElementById('zoom-detail-label-truncate');
@@ -306,22 +307,50 @@ const stopColorInput = document.getElementById('zoom-detail-stop-color');
 const geneticCodeSelect = document.getElementById('zoom-detail-genetic-code');
 const inlineLabelMinFont = document.getElementById('zoom-detail-min-font');
 const zoomDetailButton = document.getElementById('zoom-detail-zoom');
+const featureTrackSeparationBeforeAlong = new WeakMap();
 
 const geneticCodeOptions = Object.entries(cgv.codonTables.names()).map(([id, name]) =>
   `<option value='${id}'>${id} — ${name}</option>`
 );
 geneticCodeSelect.innerHTML = geneticCodeOptions.join('\n');
 
+function featureTracks() {
+  return cgv.tracks().filter(track => track.type === 'feature');
+}
+
+function selectedFeatureTrack() {
+  return featureTracks().find(track => track.cgvID === featureTrackSelect.value);
+}
+
+function syncFeatureTrackControls() {
+  const tracks = featureTracks();
+  const previousTrackID = featureTrackSelect.value;
+  const selectedTrack = tracks.find(track => track.cgvID === previousTrackID) ||
+    tracks.find(track => track.name === 'Zoom-detail features') ||
+    tracks.find(track => track.visible) ||
+    tracks[0];
+
+  featureTrackSelect.replaceChildren(...tracks.map((track, index) => {
+    const option = document.createElement('option');
+    option.value = track.cgvID;
+    option.textContent = `${index + 1}. ${track.name}${track.visible ? '' : ' (hidden)'}`;
+    return option;
+  }));
+
+  featureTrackSelect.value = selectedTrack?.cgvID || '';
+  featureTrackSelect.disabled = tracks.length === 0;
+  featureTrackPositionSelect.value = selectedTrack?.position || 'around';
+  featureTrackPositionSelect.disabled = !selectedTrack;
+}
+
 function syncZoomDetailControls() {
   const inlineLabelsEnabled = ['inline', 'both'].includes(cgv.annotation.labelPosition);
-  const featureTrack = cgv.tracks().find(track => track.name === 'Zoom-detail features');
   translationsCheckbox.checked = cgv.sequence.translation.visible;
   translationEdgePaddingInput.value = cgv.sequence.translation.edgePadding;
   translationEdgePaddingInput.disabled = !cgv.sequence.translation.visible;
   tangentialRulerCheckbox.checked = cgv.ruler.labelPosition === 'outer' && cgv.ruler.labelStyle === 'tangential';
   featureLabelModeSelect.value = cgv.annotation.labelPosition;
-  featureTrackPositionSelect.value = featureTrack?.position || 'around';
-  featureTrackPositionSelect.disabled = !featureTrack;
+  syncFeatureTrackControls();
   shrinkInlineLabelsCheckbox.checked = cgv.annotation.inlineLabelAllowShrinking;
   truncateInlineLabelsCheckbox.checked = cgv.annotation.inlineLabelAllowTruncation;
   highlightStartsCheckbox.checked = cgv.sequence.translation.highlightStartCodons;
@@ -347,6 +376,14 @@ cgv.on('annotation-update.zoom-detail-controls', () => {
   }
 });
 
+for (const eventName of ['tracks-add', 'tracks-update', 'tracks-remove']) {
+  cgv.on(`${eventName}.zoom-detail-controls`, () => {
+    if (!cgv.loading) {
+      syncFeatureTrackControls();
+    }
+  });
+}
+
 translationsCheckbox.addEventListener('change', (e) => {
   cgv.sequence.translation.update({visible: e.target.checked});
   cgv.draw();
@@ -370,13 +407,24 @@ featureLabelModeSelect.addEventListener('change', (e) => {
   cgv.draw();
 });
 
+featureTrackSelect.addEventListener('change', () => {
+  syncFeatureTrackControls();
+});
+
 featureTrackPositionSelect.addEventListener('change', (e) => {
-  const featureTrack = cgv.tracks().find(track => track.name === 'Zoom-detail features');
+  const featureTrack = selectedFeatureTrack();
+  if (!featureTrack) { return; }
   const position = e.target.value;
-  featureTrack?.update({
-    position,
-    separateFeaturesBy: position === 'along' ? 'none' : 'strand',
-  });
+  const attributes = {position};
+  if (position === 'along') {
+    if (featureTrack.separateFeaturesBy !== 'none') {
+      featureTrackSeparationBeforeAlong.set(featureTrack, featureTrack.separateFeaturesBy);
+    }
+    attributes.separateFeaturesBy = 'none';
+  } else if (featureTrack.position === 'along') {
+    attributes.separateFeaturesBy = featureTrackSeparationBeforeAlong.get(featureTrack) || 'strand';
+  }
+  featureTrack.update(attributes);
   cgv.draw();
 });
 
