@@ -648,6 +648,14 @@ class Feature extends CGObject {
   draw(layer, slotCenterOffset, slotThickness, visibleRange, options = {}) {
     if (!this.visible) { return; }
     const canvas = this.canvas;
+    let drawOptions = options;
+    if (this._shouldDrawDirectionIndicators(layer, this.adjustedWidth(slotThickness), options)) {
+      const labelMetrics = this.viewer.annotation
+        .inlineLabelPlacementForFeature(this, options.slot, visibleRange);
+      if (labelMetrics) {
+        drawOptions = {...options, directionIndicatorLabelMetrics: labelMetrics};
+      }
+    }
     if (this.hasLocations) {
       const connectors = [];
       // Draw each location
@@ -655,7 +663,7 @@ class Feature extends CGObject {
       for (let i = 0; i < this.locations.length; i++) {
         const location = this.locations[i];
         const range = new CGRange(this.contig, location[0], location[1]);
-        const newOptions = {...options};
+        const newOptions = {...drawOptions};
         if (this.decoration === 'arrow') {
           if (this.isDirect() && i !== this.locations.length - 1) {
             newOptions.directionalDecoration = 'arc';
@@ -679,8 +687,8 @@ class Feature extends CGObject {
       // Draw connectors
       // Connector width is 5% of the feature thickness
       const connectorWidth = this.adjustedWidth(slotThickness) * 0.05;
-      const color = options.color || this.color;
-      const showShading = options.showShading;
+      const color = drawOptions.color || this.color;
+      const showShading = drawOptions.showShading;
       const minArcLength = this.legendItem.minArcLength;
       for (const connector of connectors) {
         const start = connector[0] + this.contig.lengthOffset;
@@ -691,7 +699,7 @@ class Feature extends CGObject {
           selected: this.selected});
       }
     } else {
-      this.drawRange(this.mapRange, layer, slotCenterOffset, slotThickness, visibleRange, options);
+      this.drawRange(this.mapRange, layer, slotCenterOffset, slotThickness, visibleRange, drawOptions);
     }
   }
 
@@ -828,6 +836,7 @@ class Feature extends CGObject {
           color: color.rgbaString,
           width,
           direction: this.isDirect() ? 1 : -1,
+          labelMetrics: options.directionIndicatorLabelMetrics,
         });
       }
     }

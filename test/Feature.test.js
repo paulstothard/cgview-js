@@ -308,6 +308,49 @@ describe('Feature', () => {
       expect(Math.abs(reverseTail[1] - 100)).toBeLessThan(10);
     });
 
+    test('places chevrons symmetrically outward from the rendered label edges', () => {
+      const centers = viewer.canvas._featureDirectionIndicatorCenters({
+        minimumCenter: 10,
+        maximumCenter: 90,
+        spacingBp: 10,
+        markerHalfLengthBp: 1,
+        pixelsPerBp: 10,
+        labelMetrics: {bp: 50, textWidth: 40},
+      });
+      const leftCenter = Math.max(...centers.filter(center => center < 50));
+      const rightCenter = Math.min(...centers.filter(center => center > 50));
+
+      expect(leftCenter).toBe(46);
+      expect(rightCenter).toBe(54);
+      expect(50 - leftCenter).toBe(rightCenter - 50);
+      expect(centers.filter(center => center < 50).reverse().slice(0, 3)).toEqual([46, 36, 26]);
+      expect(centers.filter(center => center > 50).slice(0, 3)).toEqual([54, 64, 74]);
+    });
+
+    test('uses the accepted inline-label placement to reserve marker space', () => {
+      const feature = viewer.addFeatures([
+        {name: 'center label', source: 'test', start: 20, stop: 220, strand: 1, legend: 'Feature'},
+      ])[0];
+      viewer.addTracks([{
+        name: 'Features', dataType: 'feature', dataMethod: 'source', dataKeys: 'test',
+        position: 'outside', separateFeaturesBy: 'none',
+      }]);
+      const slot = viewer.tracks(1).slots(1);
+      const labelMetrics = {bp: 80, textWidth: 60, pixelsPerBp: 10};
+      const placementForFeature = jest.spyOn(viewer.annotation._featureLabelRenderer, 'placementForFeature')
+        .mockReturnValue(labelMetrics);
+      const drawIndicators = jest.spyOn(viewer.canvas, 'drawFeatureDirectionIndicators')
+        .mockImplementation(() => {});
+
+      feature.draw('map', slot.centerOffset, slot.thickness, visibleRange, {
+        slot,
+        showDirectionIndicators: true,
+      });
+
+      expect(placementForFeature).toHaveBeenCalledWith(feature, slot, visibleRange);
+      expect(drawIndicators).toHaveBeenCalledWith(expect.objectContaining({labelMetrics}));
+    });
+
   });
 
 });

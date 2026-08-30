@@ -368,6 +368,17 @@ class FeatureLabelRenderer {
     return placements;
   }
 
+  /**
+   * Return the accepted inline-label placement for a feature in a slot. Feature
+   * decorations use this to reserve the exact text interval before labels are
+   * painted, while sharing the renderer's collision and fitting decisions.
+   * @private
+   */
+  placementForFeature(feature, slot, visibleRange) {
+    if (!slot || !this.annotation.visible || !['inline', 'both'].includes(this.annotation.labelPosition)) { return; }
+    return this._placementsForSlot(slot, visibleRange).get(feature);
+  }
+
   _drawStraightLabel(ctx, feature, metrics) {
     const point = this.canvas.pointForBp(metrics.bp, metrics.centerOffset);
     const font = feature.label.font;

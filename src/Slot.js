@@ -327,6 +327,7 @@ class Slot extends CGObject {
             feature.draw('map', slotCenterOffset, slotThickness, range, {
               showShading: showShading,
               showDirectionIndicators: !fast,
+              slot: this,
             });
             drawnFeatures.push(feature);
           }
@@ -336,6 +337,7 @@ class Slot extends CGObject {
             feature.draw('map', slotCenterOffset, slotThickness, range, {
               showShading: showShading,
               showDirectionIndicators: !fast,
+              slot: this,
             });
             drawnFeatures.push(feature);
           });

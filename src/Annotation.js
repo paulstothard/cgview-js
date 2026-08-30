@@ -286,6 +286,15 @@ class Annotation extends CGObject {
   }
 
   /**
+   * Return the accepted inline-label geometry for feature decorations that
+   * need to reserve its painted text interval.
+   * @private
+   */
+  inlineLabelPlacementForFeature(feature, slot, visibleRange) {
+    return this._featureLabelRenderer.placementForFeature(feature, slot, visibleRange);
+  }
+
+  /**
    * @member {LabelPlacement} - Set the label placement instance for both fast and full drawing.
    * Value can be one of the following: 'default', 'angled', or a custom LabelPlacement class.
    */

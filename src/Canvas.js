@@ -566,15 +566,16 @@ class Canvas {
       color,
       width,
       direction = 1,
+      labelMetrics,
     } = options;
     const pixelsPerBp = this.pixelsPerBp(centerOffset);
     if (!Number.isFinite(pixelsPerBp) || pixelsPerBp <= 0 || start > stop || width < 10) {
       return;
     }
 
-    const markerLengthPixels = Math.min(12, Math.max(7, width * 0.45));
-    const markerHalfHeight = Math.min(4.5, width * 0.18);
-    const spacingPixels = Math.max(32, Math.min(54, width * 1.2));
+    const markerLengthPixels = Math.min(18, Math.max(12, width * 0.55));
+    const markerHalfHeight = Math.min(8, Math.max(5, width * 0.22));
+    const spacingPixels = Math.max(42, Math.min(64, width * 1.35));
     const edgePaddingPixels = Math.max(markerLengthPixels, width * this.viewer.settings.arrowHeadLength);
     const markerHalfLengthBp = markerLengthPixels / (2 * pixelsPerBp);
     const spacingBp = spacingPixels / pixelsPerBp;
@@ -583,28 +584,29 @@ class Canvas {
     const maximumCenter = (stop + 0.5) - edgePaddingBp - markerHalfLengthBp;
     if (minimumCenter > maximumCenter) { return; }
 
-    // Anchor markers to the map coordinate system instead of to the clipped
-    // viewport edge. This keeps the same feature pattern in place while panning.
-    let centerBp = Math.ceil(minimumCenter / spacingBp) * spacingBp;
-    if (centerBp > maximumCenter) { return; }
+    const centers = this._featureDirectionIndicatorCenters({
+      minimumCenter,
+      maximumCenter,
+      spacingBp,
+      markerHalfLengthBp,
+      pixelsPerBp,
+      labelMetrics,
+    });
+    if (centers.length === 0) { return; }
 
     const indicatorColor = new Color(color);
-    indicatorColor.highlight(0.18);
-    indicatorColor.opacity = Math.min(0.28, Math.max(0.18, indicatorColor.opacity * 0.3));
+    indicatorColor.highlight(0.24);
+    indicatorColor.opacity = Math.min(0.42, Math.max(0.32, indicatorColor.opacity * 0.46));
 
     const ctx = this.context(layer);
     ctx.save();
     ctx.beginPath();
     ctx.strokeStyle = indicatorColor.rgbaString;
-    ctx.lineWidth = Math.min(1.5, Math.max(1, width * 0.05));
+    ctx.lineWidth = Math.min(2.25, Math.max(1.5, width * 0.06));
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    // A visible canvas cannot contain enough markers to approach this cap in
-    // normal use; it protects custom/export layouts with extreme dimensions.
-    const maximumIndicators = 256;
-    let indicatorCount = 0;
-    while (centerBp <= maximumCenter && indicatorCount < maximumIndicators) {
+    for (const centerBp of centers) {
       const tailBp = centerBp - (direction * markerHalfLengthBp);
       const tipBp = centerBp + (direction * markerHalfLengthBp);
       const outerTail = this.pointForBp(tailBp, centerOffset + markerHalfHeight);
@@ -613,11 +615,71 @@ class Canvas {
       ctx.moveTo(outerTail.x, outerTail.y);
       ctx.lineTo(tip.x, tip.y);
       ctx.lineTo(innerTail.x, innerTail.y);
-      centerBp += spacingBp;
-      indicatorCount++;
     }
     ctx.stroke();
     ctx.restore();
+  }
+
+  /**
+   * Plan indicator centers. Without a label they remain anchored to genomic
+   * coordinates. Around an accepted inline label, the first markers are placed
+   * at equal gutters from the two text edges and the remaining markers repeat
+   * outward at a constant screen-space interval.
+   * @private
+   */
+  _featureDirectionIndicatorCenters(options = {}) {
+    const {
+      minimumCenter,
+      maximumCenter,
+      spacingBp,
+      markerHalfLengthBp,
+      pixelsPerBp,
+      labelMetrics,
+    } = options;
+    const maximumIndicators = 256;
+    const centers = [];
+    const mapLength = this.sequence.length;
+    let labelCenter = labelMetrics?.bp;
+    if (labelCenter !== undefined && this.viewer.format === 'circular') {
+      const segmentMiddle = (minimumCenter + maximumCenter) / 2;
+      labelCenter = [labelCenter - mapLength, labelCenter, labelCenter + mapLength]
+        .reduce((closest, candidate) =>
+          Math.abs(candidate - segmentMiddle) < Math.abs(closest - segmentMiddle) ? candidate : closest
+        );
+    }
+
+    const labelGutterPixels = Math.max(10, (markerHalfLengthBp * pixelsPerBp) * 0.9);
+    const labelHalfWidthBp = labelMetrics ?
+      ((labelMetrics.textWidth / 2) + labelGutterPixels) / pixelsPerBp : 0;
+    const exclusionStart = labelCenter - labelHalfWidthBp;
+    const exclusionStop = labelCenter + labelHalfWidthBp;
+    const labelOverlapsSegment = labelMetrics &&
+      exclusionStart <= maximumCenter + markerHalfLengthBp &&
+      exclusionStop >= minimumCenter - markerHalfLengthBp;
+
+    if (labelOverlapsSegment) {
+      let centerBp = exclusionStart - markerHalfLengthBp;
+      while (centerBp >= minimumCenter && centers.length < maximumIndicators) {
+        centers.push(centerBp);
+        centerBp -= spacingBp;
+      }
+      centerBp = exclusionStop + markerHalfLengthBp;
+      while (centerBp <= maximumCenter && centers.length < maximumIndicators) {
+        centers.push(centerBp);
+        centerBp += spacingBp;
+      }
+      centers.sort((first, second) => first - second);
+      return centers;
+    }
+
+    // Anchor unlabelled patterns to the map coordinate system instead of to
+    // the clipped viewport edge so they remain stationary while panning.
+    let centerBp = Math.ceil(minimumCenter / spacingBp) * spacingBp;
+    while (centerBp <= maximumCenter && centers.length < maximumIndicators) {
+      centers.push(centerBp);
+      centerBp += spacingBp;
+    }
+    return centers;
   }
 
   /**
