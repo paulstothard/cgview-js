@@ -495,6 +495,18 @@ class Annotation extends CGObject {
     }
   }
 
+  // Label collision decisions use continuous map coordinates. Aligning only
+  // after those decisions keeps the placement stable while preventing canvas
+  // text from shimmering between physical pixels during a pan.
+  _alignVisibleLabelRectsToDevicePixels() {
+    const canvas = this.canvas;
+    for (const label of this._visibleLabels) {
+      label.rect.x = canvas.pixelAligned(label.rect.x);
+      label.rect.y = canvas.pixelAligned(label.rect.y);
+      label.attachementPt = label.rect.ptForClockPosition(label.lineAttachment);
+    }
+  }
+
   visibleLabels() {
     let labelArray = new CGArray();
     const visibleRange = this._visibleRange;
@@ -624,6 +636,8 @@ class Annotation extends CGObject {
         labelRects.push(label.rect);
       }
     }
+
+    this._alignVisibleLabelRectsToDevicePixels();
 
     // Draw nonoverlapping labels
     const canvas = this.canvas;

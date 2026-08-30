@@ -1,5 +1,6 @@
 import Viewer from '../src/Viewer';
 import CGRange from '../src/CGRange';
+import Rect from '../src/Rect';
 import fs from 'fs';
 import path from 'path';
 
@@ -616,6 +617,37 @@ describe('Zoom detail options', () => {
     expect(cgv.annotation.toJSON().labelPosition).toBe('both');
     expect(cgv.annotation.toJSON().drawExternalLabels).toBeUndefined();
     expect(cgv.annotation.toJSON().drawInlineLabels).toBeUndefined();
+  });
+
+  test('aligns final external-label rectangles and attachment points to device pixels', () => {
+    const cgv = new Viewer('#map', {
+      width: 800,
+      height: 600,
+      sequence: {length: 1000},
+      annotation: {labelPosition: 'external'},
+      features: [{name: 'stable label', start: 100, stop: 300, legend: 'Feature'}],
+    });
+    const label = cgv.features(1).label;
+    const mapNode = cgv.canvas.node('map');
+    mapNode.width = 1600;
+    mapNode.style.width = '800px';
+    label.rect = new Rect(100.24, 50.26, label.width, label.height);
+    label.lineAttachment = 6;
+    cgv.annotation._visibleLabels = [label];
+
+    cgv.annotation._alignVisibleLabelRectsToDevicePixels();
+
+    expect(label.rect.x).toBe(100);
+    expect(label.rect.y).toBe(50.5);
+    expect(label.attachementPt.x).toBe(label.rect.x + (label.rect.width / 2));
+    expect(label.attachementPt.y).toBe(label.rect.y + label.rect.height);
+  });
+
+  test('preserves continuous external-label coordinates for SVG export', () => {
+    const cgv = new Viewer('#map');
+    cgv.canvas.layers('map').ctx = {getSerializedSvg: () => '<svg></svg>'};
+
+    expect(cgv.canvas.pixelAligned(100.24)).toBe(100.24);
   });
 
   test('uses canonical labelPosition when temporary placement booleans are also present', () => {

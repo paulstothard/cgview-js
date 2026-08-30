@@ -908,6 +908,27 @@ class Canvas {
   }
 
   /**
+   * Align a canvas coordinate to the physical pixel grid. This is useful for
+   * text and other small details that can shimmer when they are repeatedly
+   * redrawn at fractional device-pixel positions while the map is panned.
+   * Vector exports retain their original continuous coordinates.
+   * @param {Number} value - Canvas coordinate in CSS pixels
+   * @param {String} layer - Canvas layer whose context will be used
+   * @return {Number} Pixel-aligned canvas coordinate
+   * @private
+   */
+  pixelAligned(value, layer = 'map') {
+    const ctx = this.context(layer);
+    if (ctx && typeof ctx.getSerializedSvg === 'function') {
+      return value;
+    }
+    const node = this.node(layer);
+    const cssWidth = parseFloat(node.style.width) || this.width;
+    const ratio = (node.width && cssWidth) ? node.width / cssWidth : (this.pixelRatio || 1);
+    return Math.round(value * ratio) / ratio;
+  }
+
+  /**
    * Returns the layer with the specified name (defaults to map layer)
    * @param {String} layer - Name of layer to return
    * @private
