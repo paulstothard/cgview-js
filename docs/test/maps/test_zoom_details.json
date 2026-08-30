@@ -61,6 +61,7 @@
         "stopColor": "#fee2e2",
         "stopBorderColor": "#b91c1c",
         "stopTextColor": "#b91c1c",
+        "edgePadding": 6,
         "minimumScale": 0.5
       }
     },

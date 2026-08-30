@@ -28,6 +28,7 @@ describe('SequenceTranslation', () => {
       visible: true,
       font: 'monospace,bold,13',
       laneSpacing: 3,
+      edgePadding: 7,
       minimumScale: 0.6,
     });
 
@@ -73,9 +74,9 @@ describe('SequenceTranslation', () => {
     expect(updateLayout).toHaveBeenCalledWith(true);
   });
 
-  test('uses exact, equal radial spacing around all translation lanes', () => {
+  test('uses exact lane spacing and explicit translation-edge clearance', () => {
     const cgv = new Viewer('#map', {
-      sequence: {seq: 'ATGAAATAACCC', translation: {visible: true, laneSpacing: 2}},
+      sequence: {seq: 'ATGAAATAACCC', translation: {visible: true, laneSpacing: 2, edgePadding: 6}},
     });
     const translation = cgv.sequence.translation;
     for (const scaleFactor of [1, 0.5]) {
@@ -83,12 +84,28 @@ describe('SequenceTranslation', () => {
       const firstInnerEdge = layout.firstLaneCenterOffset - (layout.laneHeight / 2);
       const trailingEdgeGap = layout.backboneEdgeOffset - layout.outerLaneEdgeOffset;
 
-      expect(firstInnerEdge - (cgv.sequence.baseThickness * scaleFactor / 2)).toBeCloseTo(layout.laneSpacing);
+      expect(firstInnerEdge - (cgv.sequence.baseThickness * scaleFactor / 2)).toBeCloseTo(layout.edgePadding);
       expect(layout.laneStep - layout.laneHeight).toBeCloseTo(layout.laneSpacing);
-      expect(trailingEdgeGap).toBeCloseTo(layout.laneSpacing);
+      expect(trailingEdgeGap).toBeCloseTo(layout.edgePadding);
     }
-    expect(translation.strandThickness).toBe((3 * translation.laneHeight) + (4 * translation.laneSpacing));
+    expect(translation.strandThickness).toBe(
+      (3 * translation.laneHeight) + (2 * translation.laneSpacing) + (2 * translation.edgePadding)
+    );
     expect(translation.thickness).toBe(2 * translation.strandThickness);
+  });
+
+  test('keeps backbone expansion identical to scaled sequence-detail geometry', () => {
+    const cgv = new Viewer('#map', {
+      sequence: {seq: 'ATGAAATAACCC', translation: {visible: true, edgePadding: 6}},
+    });
+    cgv._zoomFactor = 4;
+    const pixelsPerBpMock = jest.spyOn(cgv.backbone, 'pixelsPerBp');
+
+    for (const pixelsPerBp of [5.5, 8.25, 11, 17]) {
+      pixelsPerBpMock.mockReturnValueOnce(pixelsPerBp);
+      cgv.backbone.refreshThickness();
+      expect(cgv.backbone.adjustedThickness).toBeCloseTo(cgv.sequence.detailThickness(pixelsPerBp));
+    }
   });
 
   test('translates all direct frames from the map origin', () => {
@@ -187,7 +204,10 @@ describe('SequenceTranslation', () => {
 
     const drawElement = jest.spyOn(cgv.canvas, 'drawElement').mockImplementation(() => {});
     const pointForBp = jest.spyOn(cgv.canvas, 'pointForBp').mockReturnValue({x: 12, y: 34});
-    const fillText = jest.spyOn(cgv.canvas.context('map'), 'fillText');
+    const ctx = cgv.canvas.context('map');
+    const fillText = jest.spyOn(ctx, 'fillText');
+    const translate = jest.spyOn(ctx, 'translate');
+    const rotate = jest.spyOn(ctx, 'rotate');
     translation._drawCodon(codons[0].start, codons[0].aminoAcid, codons[0].isStart, codons[0].isStop, 100, 15);
     expect(drawElement).toHaveBeenCalledWith(expect.objectContaining({
       color: 'rgba(209,250,229,1)',
@@ -195,7 +215,9 @@ describe('SequenceTranslation', () => {
       borderColor: 'rgba(5,150,105,1)',
     }));
     expect(pointForBp).toHaveBeenLastCalledWith(codons[0].start + 1, 100);
-    expect(fillText).toHaveBeenLastCalledWith(codons[0].aminoAcid, 12, 34);
+    expect(translate).toHaveBeenLastCalledWith(12, 34);
+    expect(rotate).toHaveBeenCalled();
+    expect(fillText).toHaveBeenLastCalledWith(codons[0].aminoAcid, 0, 0);
     translation._drawCodon(codons[1].start, codons[1].aminoAcid, codons[1].isStart, codons[1].isStop, 100, 15);
     expect(drawElement).toHaveBeenLastCalledWith(expect.objectContaining({
       color: 'rgba(254,226,226,1)',
@@ -209,6 +231,12 @@ describe('SequenceTranslation', () => {
       color: translation.backgroundColor.rgbaString,
       showBorder: false,
     }));
+
+    const circularRotateCount = rotate.mock.calls.length;
+    cgv.format = 'linear';
+    translation._drawCodon(codons[0].start, codons[0].aminoAcid, false, false, 100, 15);
+    expect(rotate).toHaveBeenCalledTimes(circularRotateCount);
+    expect(fillText).toHaveBeenLastCalledWith(codons[0].aminoAcid, 12, 34);
   });
 
   test('streams only visible codons during drawing instead of building frame arrays', () => {

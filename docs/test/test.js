@@ -294,6 +294,7 @@ clearBtn.addEventListener('click', (e) => {
 
 const translationsCheckbox = document.getElementById('zoom-detail-translations');
 const tangentialRulerCheckbox = document.getElementById('zoom-detail-ruler');
+const translationEdgePaddingInput = document.getElementById('zoom-detail-edge-padding');
 const featureLabelModeSelect = document.getElementById('zoom-detail-label-mode');
 const featureTrackPositionSelect = document.getElementById('zoom-detail-track-position');
 const shrinkInlineLabelsCheckbox = document.getElementById('zoom-detail-label-shrink');
@@ -315,6 +316,8 @@ function syncZoomDetailControls() {
   const inlineLabelsEnabled = ['inline', 'both'].includes(cgv.annotation.labelPosition);
   const featureTrack = cgv.tracks().find(track => track.name === 'Zoom-detail features');
   translationsCheckbox.checked = cgv.sequence.translation.visible;
+  translationEdgePaddingInput.value = cgv.sequence.translation.edgePadding;
+  translationEdgePaddingInput.disabled = !cgv.sequence.translation.visible;
   tangentialRulerCheckbox.checked = cgv.ruler.labelPosition === 'outer' && cgv.ruler.labelStyle === 'tangential';
   featureLabelModeSelect.value = cgv.annotation.labelPosition;
   featureTrackPositionSelect.value = featureTrack?.position || 'around';
@@ -346,6 +349,11 @@ cgv.on('annotation-update.zoom-detail-controls', () => {
 
 translationsCheckbox.addEventListener('change', (e) => {
   cgv.sequence.translation.update({visible: e.target.checked});
+  cgv.draw();
+});
+
+translationEdgePaddingInput.addEventListener('change', (e) => {
+  cgv.sequence.translation.update({edgePadding: Number(e.target.value)});
   cgv.draw();
 });
 

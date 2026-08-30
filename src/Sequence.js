@@ -439,6 +439,20 @@ class Sequence extends CGObject {
   }
 
   /**
+   * Backbone thickness occupied by sequence detail at the supplied scale.
+   * This is shared by the backbone expansion and detail renderers so their
+   * radial geometry remains identical throughout the zoom transition.
+   * @param {Number} pixelsPerBp - Backbone pixels per base pair.
+   * @return {Number} Scaled sequence-detail thickness in pixels.
+   * @private
+   */
+  detailThickness(pixelsPerBp) {
+    if (!this.visible) { return 0; }
+    const scaleFactor = this.detailScaleFactor(pixelsPerBp);
+    return (this.baseThickness * scaleFactor) + this.translation.scaledThickness(pixelsPerBp);
+  }
+
+  /**
    * Scale used as nucleotide and amino-acid detail fades in while zooming.
    * @private
    */

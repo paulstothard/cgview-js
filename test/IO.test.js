@@ -74,6 +74,7 @@ describe('IO', () => {
       expect(() => cgv.io.loadJSON(json)).not.toThrow();
       expect(cgv.sequence.translation.highlightStartCodons).toBe(true);
       expect(cgv.sequence.translation.highlightStopCodons).toBe(true);
+      expect(cgv.sequence.translation.edgePadding).toBe(6);
       expect(cgv.sequence.translation.startColor.rgbaString).toBe('rgba(0,128,0,1)');
       expect(cgv.sequence.translation.stopColor.rgbaString).toBe('rgba(255,0,0,1)');
       expect(() => cgv.draw()).not.toThrow();
@@ -100,6 +101,7 @@ describe('IO', () => {
               highlightStartCodons: false,
               highlightStopCodons: true,
               laneSpacing: 3,
+              edgePadding: 7,
               minimumScale: 0.6,
             },
           },
@@ -136,6 +138,7 @@ describe('IO', () => {
       expect(secondViewer.sequence.translation.visible).toBe(false);
       expect(secondViewer.sequence.translation.highlightStartCodons).toBe(false);
       expect(secondViewer.sequence.translation.highlightStopCodons).toBe(true);
+      expect(secondViewer.sequence.translation.edgePadding).toBe(7);
       expect(secondViewer.ruler.labelPosition).toBe('outer');
       expect(secondViewer.ruler.labelStyle).toBe('tangential');
       expect(secondViewer.annotation.labelPosition).toBe('inline');

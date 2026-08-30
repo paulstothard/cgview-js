@@ -56,7 +56,8 @@ const COMPLEMENT = {
  * [stopTextColor](#stopTextColor)   | String  | Stop-codon amino-acid color
  * [highlightStartCodons](#highlightStartCodons) | Boolean | Highlight starts defined by the active genetic code [Default: true]
  * [highlightStopCodons](#highlightStopCodons) | Boolean | Highlight stops defined by the active genetic code [Default: true]
- * [laneSpacing](#laneSpacing)         | Number  | Equal spacing between lanes and at the inner and outer translation edges [Default: 2]
+ * [laneSpacing](#laneSpacing)       | Number  | Radial spacing between adjacent reading-frame lanes [Default: 2]
+ * [edgePadding](#edgePadding)       | Number  | Radial clearance at both edges of each strand's translation band [Default: 6]
  * [visible](CGObject.html#visible)  | Boolean | Show six-frame translations at sufficient zoom [Default: false]
  *
  * @extends CGObject
@@ -80,6 +81,7 @@ class SequenceTranslation extends CGObject {
     this.highlightStartCodons = utils.defaultFor(options.highlightStartCodons, true);
     this.highlightStopCodons = utils.defaultFor(options.highlightStopCodons, true);
     this.laneSpacing = utils.defaultFor(options.laneSpacing, 2);
+    this.edgePadding = utils.defaultFor(options.edgePadding, 6);
     this.minimumScale = utils.defaultFor(options.minimumScale, 0.5);
 
     this.viewer.trigger('sequence-translation-update', { attributes: this.toJSON({includeDefaults: true}) });
@@ -200,8 +202,7 @@ class SequenceTranslation extends CGObject {
   }
 
   /**
-   * @member {Number} - Radial spacing between translation lanes and at both
-   * translation edges.
+   * @member {Number} - Radial spacing between adjacent translation lanes.
    */
   get laneSpacing() {
     return this._laneSpacing;
@@ -211,6 +212,21 @@ class SequenceTranslation extends CGObject {
     const laneSpacing = Math.max(0, Number(value) || 0);
     if (laneSpacing === this._laneSpacing) { return; }
     this._laneSpacing = laneSpacing;
+    this._requestLayoutUpdate();
+  }
+
+  /**
+   * @member {Number} - Radial clearance between the nucleotide rows and first
+   * translation lane, and between the final lane and backbone edge.
+   */
+  get edgePadding() {
+    return this._edgePadding;
+  }
+
+  set edgePadding(value) {
+    const edgePadding = Math.max(0, Number(value) || 0);
+    if (edgePadding === this._edgePadding) { return; }
+    this._edgePadding = edgePadding;
     this._requestLayoutUpdate();
   }
 
@@ -230,12 +246,15 @@ class SequenceTranslation extends CGObject {
   }
 
   /**
-   * Radial space occupied by one strand's lanes, including equal spacing at
-   * both edges. This is the source of truth for backbone expansion.
+   * Radial space occupied by one strand's lanes, including inter-lane spacing
+   * and explicit clearance at both edges. This is the source of truth for
+   * backbone expansion.
    * @private
    */
   get strandThickness() {
-    return (this.lanesPerStrand * this.laneHeight) + ((this.lanesPerStrand + 1) * this.laneSpacing);
+    return (this.lanesPerStrand * this.laneHeight) +
+      ((this.lanesPerStrand - 1) * this.laneSpacing) +
+      (2 * this.edgePadding);
   }
 
   /**
@@ -255,14 +274,16 @@ class SequenceTranslation extends CGObject {
   _layoutForScale(scaleFactor) {
     const laneHeight = this.laneHeight * scaleFactor;
     const laneSpacing = this.laneSpacing * scaleFactor;
+    const edgePadding = this.edgePadding * scaleFactor;
     const laneStep = laneHeight + laneSpacing;
     const sequenceHalfThickness = this.sequence.baseThickness * scaleFactor / 2;
-    const firstLaneCenterOffset = sequenceHalfThickness + laneSpacing + (laneHeight / 2);
+    const firstLaneCenterOffset = sequenceHalfThickness + edgePadding + (laneHeight / 2);
     const outerLaneEdgeOffset = firstLaneCenterOffset + ((this.lanesPerStrand - 1) * laneStep) + (laneHeight / 2);
     const backboneEdgeOffset = sequenceHalfThickness + (this.strandThickness * scaleFactor);
     return {
       laneHeight,
       laneSpacing,
+      edgePadding,
       laneStep,
       firstLaneCenterOffset,
       outerLaneEdgeOffset,
@@ -409,9 +430,24 @@ class SequenceTranslation extends CGObject {
     });
 
     const ctx = this.canvas.context('map');
-    const origin = this.canvas.pointForBp(start + 1, centerOffset);
+    const middle = start + 1;
+    const origin = this.canvas.pointForBp(middle, centerOffset);
     ctx.fillStyle = textColor.rgbaString;
-    ctx.fillText(aminoAcid, origin.x, origin.y);
+    if (this.viewer.format === 'circular') {
+      let angle = this.viewer.scale.bp(middle) + (Math.PI / 2);
+      while (angle > Math.PI) { angle -= Math.PI * 2; }
+      while (angle <= -Math.PI) { angle += Math.PI * 2; }
+      if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
+        angle += Math.PI;
+      }
+      ctx.save();
+      ctx.translate(origin.x, origin.y);
+      ctx.rotate(angle);
+      ctx.fillText(aminoAcid, 0, 0);
+      ctx.restore();
+    } else {
+      ctx.fillText(aminoAcid, origin.x, origin.y);
+    }
   }
 
   draw(visibleRange, backboneCenterOffset, pixelsPerBp) {
@@ -470,7 +506,7 @@ class SequenceTranslation extends CGObject {
           'startColor', 'startBorderColor', 'startTextColor',
           'stopColor', 'stopBorderColor', 'stopTextColor',
           'highlightStartCodons', 'highlightStopCodons',
-          'laneSpacing', 'minimumScale', 'visible'
+          'laneSpacing', 'edgePadding', 'minimumScale', 'visible'
         ]
       });
     } finally {
@@ -510,6 +546,7 @@ class SequenceTranslation extends CGObject {
       highlightStartCodons: this.highlightStartCodons,
       highlightStopCodons: this.highlightStopCodons,
       laneSpacing: this.laneSpacing,
+      edgePadding: this.edgePadding,
       minimumScale: this.minimumScale,
       visible: this.visible,
     };

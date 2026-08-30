@@ -360,12 +360,8 @@ class Backbone extends CGObject {
       // const zoomedThicknessWithoutAddition = Math.min(this.adjustedCenterOffset, this.viewer.maxZoomedRadius()) * (this.thickness / this.centerOffset);
       // FIXME: see adjustedThickness for note. Use 4 for now.
       const zoomedThicknessWithoutAddition = Math.min(this.viewer.zoomFactor, 4) * this.thickness;
-      const addition = (pixelsPerBp * 2) + this.sequence.translation.scaledThickness(pixelsPerBp);
-      if ( (zoomedThicknessWithoutAddition + addition ) >= this.maxThickness) {
-        this._bpThicknessAddition = this.maxThickness - zoomedThicknessWithoutAddition;
-      } else {
-        this._bpThicknessAddition = addition;
-      }
+      const detailThickness = this.sequence.detailThickness(pixelsPerBp);
+      this._bpThicknessAddition = Math.max(0, detailThickness - zoomedThicknessWithoutAddition);
     } else {
       this._bpThicknessAddition = 0;
     }

@@ -28,7 +28,7 @@
     <script src="../scripts/svgcanvas.iife.js"></script>
     <!-- CGView -->
     <!-- <script src='../dist/cgview.min.js'></script> -->
-    <script src='../dist/cgview.js?v=translation-layout-fix-1'></script>
+    <script src='../dist/cgview.js?v=translation-placement-fix-2'></script>
 
     <link rel="stylesheet" href="../dist/cgview.css" />
     <link rel="stylesheet" href="../styles/controls.css" />
@@ -146,6 +146,8 @@
           <div class='zoom-detail-grid'>
             <label><input id='zoom-detail-translations' type='checkbox' /> Six-frame translation</label>
             <label><input id='zoom-detail-ruler' type='checkbox' /> Tangential ruler labels</label>
+            <label for='zoom-detail-edge-padding'>Translation edge padding</label>
+            <input id='zoom-detail-edge-padding' class='form-control form-control-sm' type='number' min='0' max='20' step='1' />
             <label for='zoom-detail-label-mode'>Feature label mode</label>
             <select id='zoom-detail-label-mode' class='form-select form-select-sm'>
               <option value='external'>External only</option>
@@ -237,7 +239,7 @@
     <!-- Bootstrap JavaScript -->
     <script src="../scripts/bootstrap.min.js"></script>
 
-    <script src='test.js?v=translation-layout-fix-1'></script>
+    <script src='test.js?v=translation-placement-fix-2'></script>
     <script src='../scripts/controls.js'></script>
 
   </body>
