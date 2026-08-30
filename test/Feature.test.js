@@ -162,6 +162,28 @@ describe('Feature', () => {
       }));
     });
 
+    test('uses a compact arc until a feature has room for an arrowhead and body', () => {
+      const feature = viewer.addFeatures([
+        {name: 'DNA polymerase', start: 12, stop: 104, strand: 1, legend: 'Replication'},
+      ])[0];
+      const visibleRange = new CGRange(viewer.sequence.mapContig, 1, 360);
+      const pixelsPerBp = jest.spyOn(viewer.canvas, 'pixelsPerBp').mockReturnValue(0.1);
+      const drawElement = jest.spyOn(viewer.canvas, 'drawElement').mockImplementation(() => {});
+
+      feature.drawRange(feature.mapRange, 'map', 100, 20, visibleRange, {showShading: true});
+      expect(drawElement).toHaveBeenLastCalledWith(expect.objectContaining({
+        decoration: 'arc',
+        showShading: false,
+      }));
+
+      pixelsPerBp.mockReturnValue(1);
+      feature.drawRange(feature.mapRange, 'map', 100, 20, visibleRange, {showShading: true});
+      expect(drawElement).toHaveBeenLastCalledWith(expect.objectContaining({
+        decoration: 'clockwise-arrow',
+        showShading: true,
+      }));
+    });
+
     test('splits wrapped visibility into bounded linear feature segments', () => {
       const feature = viewer.addFeatures([
         {name: 'long regulator', start: 10, stop: 350, strand: 1, legend: 'Regulation'},

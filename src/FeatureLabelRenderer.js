@@ -264,7 +264,9 @@ class FeatureLabelRenderer {
     for (const segment of segments) {
       let availableWidth = (segment.length * pixelsPerBp) - (padding * 2);
       const arrowTip = feature.isDirect() ? feature.mapStop : feature.mapStart;
-      if (feature.decoration === 'arrow' && this._segmentContains(segment, arrowTip)) {
+      if (feature.decoration === 'arrow' &&
+        this._segmentContains(segment, arrowTip) &&
+        feature._arrowheadFits(segment.length, adjustedCenterOffset, adjustedWidth)) {
         availableWidth -= adjustedWidth * this.viewer.settings.arrowHeadLength;
       }
       if (availableWidth <= 0) { continue; }

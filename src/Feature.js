@@ -787,6 +787,35 @@ class Feature extends CGObject {
   }
 
   /**
+   * Return whether an arrowhead has enough projected length to remain
+   * legible without overwhelming the feature body. At overview scales, a
+   * short feature is drawn as an arc instead of being expanded into a
+   * full-thickness wedge. Directional arrowheads return naturally as the map
+   * is zoomed in.
+   * @private
+   */
+  _arrowheadFits(lengthBp, centerOffset, width) {
+    const pixelsPerBp = this.canvas.pixelsPerBp(centerOffset);
+    if (!Number.isFinite(pixelsPerBp) || pixelsPerBp <= 0) { return false; }
+    const projectedLength = lengthBp * pixelsPerBp;
+    const arrowheadLength = width * this.viewer.settings.arrowHeadLength;
+    // Require space for the head and an equally long body. The absolute
+    // minimum avoids trying to communicate direction in subpixel geometry.
+    return projectedLength >= Math.max(3, arrowheadLength * 2);
+  }
+
+  /**
+   * Adapt a directional decoration to the available screen-space geometry.
+   * @private
+   */
+  _decorationForProjectedLength(decoration, segment, centerOffset, width) {
+    const isArrow = decoration === 'clockwise-arrow' || decoration === 'counterclockwise-arrow';
+    if (!isArrow) { return decoration; }
+    const lengthBp = segment[1] - segment[0] + 1;
+    return this._arrowheadFits(lengthBp, centerOffset, width) ? decoration : 'arc';
+  }
+
+  /**
    * Direction indicators are a base-detail aid, not part of the feature's
    * overview geometry. Keeping the gate here avoids per-feature marker work in
    * fast draws and on maps that do not contain an actual sequence.
@@ -813,12 +842,19 @@ class Feature extends CGObject {
     const centerOffset = this.adjustedCenterOffset(slotCenterOffset, slotThickness);
     const width = this.adjustedWidth(slotThickness);
     for (const segment of drawSegments) {
+      const endpointDecoration = this._decorationForDrawSegment(directionalDecoration, segment, range);
+      const decoration = this._decorationForProjectedLength(endpointDecoration, segment, centerOffset, width);
+      const usesCompactArc = decoration === 'arc' && endpointDecoration !== 'arc';
       canvas.drawElement({
         layer, start: segment[0], stop: segment[1],
         centerOffset,
         color: color.rgbaString, width,
-        decoration: this._decorationForDrawSegment(directionalDecoration, segment, range),
-        showShading, minArcLength,
+        decoration,
+        // A subpixel directional segment cannot resolve separate highlight and
+        // shadow edges. A single solid stroke is both calmer and considerably
+        // cheaper on dense overview maps.
+        showShading: usesCompactArc ? false : showShading,
+        minArcLength,
         selected: this.selected,
       });
     }
