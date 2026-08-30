@@ -50,8 +50,8 @@ import FeatureLabelRenderer from './FeatureLabelRenderer';
  * [onlyDrawFavorites](#onlyDrawFavorites) | Boolean   | Only draw labels for features that are favorited [Default: false]
  * [labelPlacement](#labelPlacement) | String   | The label placement method for positioning labels. Choices: 'default', 'angled' [Default: 'default']
  * [drawExternalLabels](#drawExternalLabels) | Boolean | Draw the traditional labels outside the map [Default: true]
- * [drawInlineLabels](#drawInlineLabels) | Boolean | Draw labels inside features when zoomed and space permits [Default: false]
- * [inlineLabelMinZoomFactor](#inlineLabelMinZoomFactor) | Number | Minimum zoom factor for inline labels [Default: 2]
+ * [drawInlineLabels](#drawInlineLabels) | Boolean | Draw labels inside features whenever space permits [Default: false]
+ * [inlineLabelMinZoomFactor](#inlineLabelMinZoomFactor) | Number | Optional minimum zoom factor for inline labels [Default: 1]
  * [inlineLabelMinFontSize](#inlineLabelMinFontSize) | Number | Smallest permitted inline-label font in pixels [Default: 8]
  * [inlineLabelPadding](#inlineLabelPadding) | Number | Padding around inline labels in pixels [Default: 2]
  * [inlineLabelColor](#inlineLabelColor) | String | Inline-label color. When omitted, black or white is chosen for contrast.
@@ -72,7 +72,7 @@ import FeatureLabelRenderer from './FeatureLabelRenderer';
  * cgv.annotation.labelPlacementFast = 'default'
  * cgv.annotation.labelPlacementFull = 'angled'
  *
- * // Prefer labels inside features at zoom, without external duplicates.
+ * // Prefer labels inside features whenever they fit, without external duplicates.
  * cgv.annotation.update({
  *   drawExternalLabels: false,
  *   drawInlineLabels: true,
@@ -107,7 +107,7 @@ class Annotation extends CGObject {
     this.onlyDrawFavorites = utils.defaultFor(options.onlyDrawFavorites, false);
     this.drawExternalLabels = utils.defaultFor(options.drawExternalLabels, true);
     this.drawInlineLabels = utils.defaultFor(options.drawInlineLabels, false);
-    this.inlineLabelMinZoomFactor = utils.defaultFor(options.inlineLabelMinZoomFactor, 2);
+    this.inlineLabelMinZoomFactor = utils.defaultFor(options.inlineLabelMinZoomFactor, 1);
     this.inlineLabelMinFontSize = utils.defaultFor(options.inlineLabelMinFontSize, 8);
     this.inlineLabelPadding = utils.defaultFor(options.inlineLabelPadding, 2);
     this.inlineLabelColor = options.inlineLabelColor;

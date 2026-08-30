@@ -60,7 +60,7 @@ maps = {
   zoom_details: {
     name: 'Zoom Detail Features [360 bp]',
     type: 'test',
-    url: 'maps/test_zoom_details.json',
+    url: 'maps/test_zoom_details.json?v=overview-labels',
   },
   paper: {
     name: 'Paper Figure (E. coli PA2)',

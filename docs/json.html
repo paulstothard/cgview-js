@@ -104,6 +104,8 @@ settings are preserved by
 [IO.toJSON](api/IO.html#toJSON) and [IO.loadJSON](api/IO.html#loadJSON).
 The six protein sequences are not stored in the viewer. Translation is computed
 on demand only for codons intersecting the visible base-pair-detail window.
+Inline feature labels are fit-tested at every zoom level by default; set
+`inlineLabelMinZoomFactor` above 1 to delay them deliberately.
 
 ```json
 {
@@ -140,7 +142,7 @@ on demand only for codons intersecting the visible base-pair-detail window.
             "font": "sans-serif,plain,12",
             "drawExternalLabels": false,
             "drawInlineLabels": true,
-            "inlineLabelMinZoomFactor": 2,
+            "inlineLabelMinZoomFactor": 1,
             "inlineLabelMinFontSize": 8,
             "inlineLabelPadding": 2
         },

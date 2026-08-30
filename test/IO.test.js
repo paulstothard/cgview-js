@@ -50,6 +50,7 @@ describe('IO', () => {
       expect(cgv.ruler.labelStyle).toBe('default');
       expect(cgv.annotation.drawExternalLabels).toBe(true);
       expect(cgv.annotation.drawInlineLabels).toBe(false);
+      expect(cgv.annotation.inlineLabelMinZoomFactor).toBe(1);
       expect(cgv.io.toJSON().cgview.sequence.translation).toBeUndefined();
       expect(() => cgv.draw()).not.toThrow();
     });

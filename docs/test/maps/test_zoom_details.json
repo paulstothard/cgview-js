@@ -27,7 +27,7 @@
       "font": "sans-serif,bold,13",
       "drawExternalLabels": false,
       "drawInlineLabels": true,
-      "inlineLabelMinZoomFactor": 2,
+      "inlineLabelMinZoomFactor": 1,
       "inlineLabelMinFontSize": 8,
       "inlineLabelPadding": 2,
       "visible": true

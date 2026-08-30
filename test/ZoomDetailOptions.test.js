@@ -1,5 +1,7 @@
 import Viewer from '../src/Viewer';
 import CGRange from '../src/CGRange';
+import fs from 'fs';
+import path from 'path';
 
 describe('Zoom detail options', () => {
 
@@ -50,6 +52,42 @@ describe('Zoom detail options', () => {
     expect(metrics.fontSize).toBeLessThanOrEqual(16);
   });
 
+  test('shows inline labels at overview zoom when the feature has enough space', () => {
+    const cgv = new Viewer('#map', {
+      sequence: {length: 1000},
+      annotation: {
+        font: 'sans-serif, plain, 14',
+        drawInlineLabels: true,
+        inlineLabelMinFontSize: 8,
+      },
+      features: [{name: 'overview label', source: 'test', start: 100, stop: 500, legend: 'Feature'}],
+    });
+    const feature = cgv.features(1);
+    const visibleRange = new CGRange(cgv.sequence.mapContig, 1, 1000);
+    cgv._zoomFactor = 1;
+    jest.spyOn(cgv.canvas, 'pixelsPerBp').mockReturnValue(0.5);
+
+    const metrics = cgv.annotation._featureLabelRenderer.metricsFor(feature, cgv.backbone.adjustedCenterOffset, 20, visibleRange);
+    expect(cgv.annotation.inlineLabelMinZoomFactor).toBe(1);
+    expect(metrics).toBeDefined();
+    expect(metrics.fontSize).toBeGreaterThanOrEqual(8);
+  });
+
+  test('draws fitting inline labels on the zoom-detail map at overview', () => {
+    const mapPath = path.join(process.cwd(), 'docs/test/maps/test_zoom_details.json');
+    const json = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
+    const cgv = new Viewer('#map', {width: 800, height: 600});
+    cgv.io.loadJSON(json);
+    cgv.resize(800, 600);
+    const ctx = cgv.canvas.context('map');
+    const fillText = jest.spyOn(ctx, 'fillText');
+
+    cgv.draw();
+
+    expect(cgv.zoomFactor).toBeCloseTo(1);
+    expect(fillText.mock.calls.some(call => call[0] === 'DNA polymerase')).toBe(true);
+  });
+
   test('omits inline labels when the feature or zoom level cannot accommodate them', () => {
     const cgv = new Viewer('#map', {
       sequence: {length: 1000},
@@ -65,6 +103,22 @@ describe('Zoom detail options', () => {
 
     cgv._zoomFactor = 10;
     expect(cgv.annotation._featureLabelRenderer.metricsFor(feature, cgv.backbone.adjustedCenterOffset, 20, visibleRange)).toBeUndefined();
+  });
+
+  test('rejects obviously short overview features before segment layout work', () => {
+    const cgv = new Viewer('#map', {
+      sequence: {length: 1000000},
+      annotation: {drawInlineLabels: true, inlineLabelMinFontSize: 8},
+      features: [{name: 'label that is much too long', source: 'test', start: 100, stop: 110, legend: 'Feature'}],
+    });
+    const feature = cgv.features(1);
+    const visibleRange = new CGRange(cgv.sequence.mapContig, 1, cgv.sequence.length);
+    const renderer = cgv.annotation._featureLabelRenderer;
+    const visibleSegments = jest.spyOn(renderer, '_visibleSegments');
+    jest.spyOn(cgv.canvas, 'pixelsPerBp').mockReturnValue(0.001);
+
+    expect(renderer.metricsFor(feature, cgv.backbone.adjustedCenterOffset, 20, visibleRange)).toBeUndefined();
+    expect(visibleSegments).not.toHaveBeenCalled();
   });
 
   test('uses continuous label space for a feature wrapping the circular origin', () => {

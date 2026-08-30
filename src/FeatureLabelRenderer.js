@@ -102,16 +102,14 @@ class FeatureLabelRenderer {
     return new Color(luminance > 150 ? 'rgba(0,0,0,0.86)' : 'rgba(255,255,255,0.96)');
   }
 
-  _fontSizeThatFits(feature, availableWidth, availableHeight, ctx) {
+  _fontSizeThatFits(feature, availableWidth, availableHeight) {
     const font = feature.label.font;
     const maximumSize = Math.floor(Math.min(font.size, availableHeight));
     const minimumSize = this.annotation.inlineLabelMinFontSize;
-    for (let size = maximumSize; size >= minimumSize; size--) {
-      ctx.font = font.cssScaled(size / font.size);
-      if (ctx.measureText(feature.name).width <= availableWidth) {
-        return size;
-      }
-    }
+    if (maximumSize < minimumSize || !feature.label.width) { return; }
+    const widthLimitedSize = Math.floor(font.size * availableWidth / feature.label.width);
+    const size = Math.min(maximumSize, widthLimitedSize);
+    return size >= minimumSize ? size : undefined;
   }
 
   metricsFor(feature, centerOffset, slotThickness, visibleRange) {
@@ -127,8 +125,11 @@ class FeatureLabelRenderer {
     if (availableHeight < annotation.inlineLabelMinFontSize) { return; }
 
     const pixelsPerBp = this.canvas.pixelsPerBp(adjustedCenterOffset);
+    const minimumTextWidth = feature.label.width * annotation.inlineLabelMinFontSize / feature.label.font.size;
+    const maximumFeatureWidth = (feature.length * pixelsPerBp) - (padding * 2);
+    if (maximumFeatureWidth < minimumTextWidth) { return; }
+
     const segments = this._visibleSegments(feature, visibleRange).sort((a, b) => b.length - a.length);
-    const ctx = this.canvas.context('map');
     for (const segment of segments) {
       let availableWidth = (segment.length * pixelsPerBp) - (padding * 2);
       const arrowTip = feature.isDirect() ? feature.mapStop : feature.mapStart;
@@ -136,7 +137,7 @@ class FeatureLabelRenderer {
         availableWidth -= adjustedWidth * this.viewer.settings.arrowHeadLength;
       }
       if (availableWidth <= 0) { continue; }
-      const fontSize = this._fontSizeThatFits(feature, availableWidth, availableHeight, ctx);
+      const fontSize = this._fontSizeThatFits(feature, availableWidth, availableHeight);
       if (fontSize) {
         let bp = segment.start - 0.5 + (segment.length / 2);
         if (bp > this.viewer.sequence.length) {
