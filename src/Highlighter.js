@@ -132,6 +132,7 @@ class Highlighter extends CGObject {
     }
     if (this[type].highlighting) {
       this[`highlight${utils.capitalize(type)}`](e);
+      this._preserveOverlayBoxes();
     }
     if (this[type].popovers && this.visible) {
       const position = this.position(e);
@@ -178,13 +179,30 @@ class Highlighter extends CGObject {
     return metaDivs;
   }
 
+  /**
+   * Return a useful feature heading without exposing missing values in the
+   * default popover. Sequence-derived features, such as ORFs, often do not
+   * have an explicit name.
+   * @private
+   */
+  static featureTitle(feature) {
+    const qualifierValue = (key) => {
+      const value = feature.qualifiers?.[key];
+      return Array.isArray(value) ? value[0] : value;
+    };
+    const name = feature.name || qualifierValue('gene') ||
+      qualifierValue('locus_tag') || qualifierValue('product');
+    const type = feature.type || feature.legendItem?.name || 'Feature';
+    return name ? `${type}: ${name}` : type;
+  }
+
   featurePopoverContentsDefault(e) {
     const feature = e.element;
     // return `<div style='margin: 0 5px; font-size: 14px'>${feature.type}: ${feature.name}</div>`;
     const fullLength = feature.length !== feature.fullLength ? `(${utils.commaNumber(feature.fullLength)} bp)` : '';
     return (`
       <div style='margin: 0 5px; font-size: 14px'>
-        <div>${feature.type}: ${feature.name}<div>
+        <div>${Highlighter.featureTitle(feature)}<div>
         <div class='track-data'>Length: ${utils.commaNumber(feature.length)} bp ${fullLength}</div>
         ${Highlighter.getMetaDivs(feature.qualifiers)}
         ${this.showMetaData && Highlighter.getMetaDivs(feature.meta)}
@@ -265,6 +283,24 @@ class Highlighter extends CGObject {
 
   highlightContig(e) {
     // e.element.highlight(e.slot);
+  }
+
+  /**
+   * Keep legends and captions readable above transient hover graphics. These
+   * components live on persistent layers below the UI layer, so clearing only
+   * their rectangles from the UI layer reveals them without redrawing the map
+   * or allocating another full-size canvas.
+   * @private
+   */
+  _preserveOverlayBoxes() {
+    const ctx = this.viewer.canvas.context('ui');
+    const clearOverlay = (overlay) => {
+      if (!overlay?.visible || !overlay.box) { return; }
+      const box = overlay.box;
+      ctx.clearRect(box.x, box.y, box.width, box.height);
+    };
+    clearOverlay(this.viewer.legend);
+    this.viewer.captions().each((i, caption) => clearOverlay(caption));
   }
 
   hidePopoverBox() {
@@ -370,4 +406,3 @@ class HighlighterElement {
 }
 
 export { Highlighter, HighlighterElement };
-
