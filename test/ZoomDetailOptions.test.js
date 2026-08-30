@@ -600,8 +600,34 @@ describe('Zoom detail options', () => {
     expect(Math.max(...ctx.strokeText.mock.invocationCallOrder))
       .toBeLessThan(Math.min(...ctx.fillText.mock.invocationCallOrder));
     expect(ctx.strokeStyle).toBe('#f8fafc');
-    expect(ctx.lineWidth).toBe(5);
+    expect(ctx.lineWidth).toBeGreaterThanOrEqual(1.5);
+    expect(ctx.lineWidth).toBeLessThanOrEqual(2);
     expect(ctx.lineJoin).toBe('round');
+  });
+
+  test('clips external leader lines around neighboring label rectangles', () => {
+    const cgv = new Viewer('#map', {
+      sequence: {length: 1000},
+      annotation: {labelPosition: 'external'},
+      features: [
+        {name: 'first', start: 100, stop: 200, legend: 'Feature'},
+        {name: 'blocker', start: 300, stop: 400, legend: 'Feature'},
+      ],
+    });
+    const first = cgv.features(1).label;
+    const blocker = cgv.features(2).label;
+    first.bp = 150;
+    first.attachementPt = {x: 10, y: 0};
+    blocker.rect = new Rect(4, -1, 2, 2);
+    jest.spyOn(cgv.canvas, 'pointForBp').mockReturnValue({x: 0, y: 0});
+    const ctx = cgv.canvas.context('map');
+    ctx.moveTo.mockClear();
+    ctx.lineTo.mockClear();
+
+    cgv.annotation.drawLabelLine(first, ctx, undefined, [first, blocker]);
+
+    expect(ctx.moveTo.mock.calls).toEqual([[0, 0], [7, 0]]);
+    expect(ctx.lineTo.mock.calls).toEqual([[3, 0], [10, 0]]);
   });
 
   test('applies onlyDrawFavorites to inline labels', () => {

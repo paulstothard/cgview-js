@@ -560,13 +560,81 @@ class Annotation extends CGObject {
     }
   }
 
-  drawLabelLine(label, ctx, lineWidth) {
+  /**
+   * Return the portion of a line that lies inside an axis-aligned rectangle.
+   * Values are expressed as fractions along the line from 0 to 1.
+   * @private
+   */
+  _lineRectInterval(start, stop, rect, padding = 0) {
+    const dx = stop.x - start.x;
+    const dy = stop.y - start.y;
+    let enter = 0;
+    let exit = 1;
+    const axes = [
+      {origin: start.x, delta: dx, minimum: rect.left - padding, maximum: rect.right + padding},
+      {origin: start.y, delta: dy, minimum: rect.top - padding, maximum: rect.bottom + padding},
+    ];
+    for (const axis of axes) {
+      if (Math.abs(axis.delta) < 0.000001) {
+        if (axis.origin < axis.minimum || axis.origin > axis.maximum) { return; }
+        continue;
+      }
+      const first = (axis.minimum - axis.origin) / axis.delta;
+      const second = (axis.maximum - axis.origin) / axis.delta;
+      enter = Math.max(enter, Math.min(first, second));
+      exit = Math.min(exit, Math.max(first, second));
+      if (enter >= exit) { return; }
+    }
+    return [enter, exit];
+  }
+
+  /**
+   * Split a label leader line around other visible label rectangles. This
+   * prevents lines from showing through glyph counters and word spacing, so a
+   * heavy text outline is unnecessary in both canvas and SVG output.
+   * @private
+   */
+  _visibleLabelLineIntervals(label, start, stop, labels = []) {
+    const blocked = [];
+    for (const blocker of labels) {
+      if (blocker === label || !blocker.feature.visible || !blocker.rect) { continue; }
+      const interval = this._lineRectInterval(start, stop, blocker.rect, 1);
+      if (interval) { blocked.push(interval); }
+    }
+    if (blocked.length === 0) { return [[0, 1]]; }
+
+    blocked.sort((first, second) => first[0] - second[0]);
+    const visible = [];
+    let cursor = 0;
+    for (const interval of blocked) {
+      if (interval[0] > cursor) {
+        visible.push([cursor, interval[0]]);
+      }
+      cursor = Math.max(cursor, interval[1]);
+      if (cursor >= 1) { break; }
+    }
+    if (cursor < 1) { visible.push([cursor, 1]); }
+    return visible;
+  }
+
+  drawLabelLine(label, ctx, lineWidth, blockingLabels = []) {
     const innerPt = this.canvas.pointForBp(label.bp, this._outerCenterOffset + this._labelLineMarginInner);
     const outerPt = label.attachementPt;
     const color = this.color || label.feature.color;
     ctx.beginPath();
-    ctx.moveTo(innerPt.x, innerPt.y);
-    ctx.lineTo(outerPt.x, outerPt.y);
+    const intervals = this._visibleLabelLineIntervals(label, innerPt, outerPt, blockingLabels);
+    for (const interval of intervals) {
+      const start = {
+        x: innerPt.x + ((outerPt.x - innerPt.x) * interval[0]),
+        y: innerPt.y + ((outerPt.y - innerPt.y) * interval[0]),
+      };
+      const stop = {
+        x: innerPt.x + ((outerPt.x - innerPt.x) * interval[1]),
+        y: innerPt.y + ((outerPt.y - innerPt.y) * interval[1]),
+      };
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(stop.x, stop.y);
+    }
     ctx.strokeStyle = color.rgbaString;
     ctx.lineCap = this.lineCap;
     ctx.lineWidth = lineWidth || this._labelLineWidth;
@@ -666,14 +734,17 @@ class Annotation extends CGObject {
       if (!label.feature.visible) { continue; }
       const color = this.color || label.feature.color;
 
-      this.drawLabelLine(label, ctx);
+      this.drawLabelLine(label, ctx, undefined, this._visibleLabels);
     }
 
     // Draw every protective stroke before any text fill. This keeps nearby
     // halos from washing over already-filled glyphs and replaces the former
     // translucent rectangular backing with a compact rounded outline.
     ctx.strokeStyle = this.viewer.settings.backgroundColor.rgbaString;
-    ctx.lineWidth = 5;
+    // External labels normally sit on the map background, so their halo only
+    // needs to soften nearby geometry. Keep it below a visible outline width;
+    // ruler labels use their own stronger halo where tracks can pass beneath.
+    ctx.lineWidth = Math.max(1.5, Math.min(2, this.font.height * 0.14));
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     ctx.miterLimit = 2;
