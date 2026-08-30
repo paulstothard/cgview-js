@@ -101,6 +101,8 @@ describe('SequenceTranslation', () => {
       expect(firstInnerEdge - (cgv.sequence.baseThickness * scaleFactor / 2)).toBeCloseTo(layout.edgePadding);
       expect(layout.laneStep - layout.laneHeight).toBeCloseTo(layout.laneSpacing);
       expect(trailingEdgeGap).toBeCloseTo(layout.edgePadding);
+      expect((layout.laneHeight - layout.highlightHeight) / 2).toBeCloseTo(1.25 * scaleFactor);
+      expect(layout.highlightBorderWidth).toBeCloseTo(scaleFactor);
     }
     expect(translation.strandThickness).toBe(
       (3 * translation.laneHeight) + (2 * translation.laneSpacing) + (2 * translation.edgePadding)
@@ -222,17 +224,20 @@ describe('SequenceTranslation', () => {
     const fillText = jest.spyOn(ctx, 'fillText');
     const translate = jest.spyOn(ctx, 'translate');
     const rotate = jest.spyOn(ctx, 'rotate');
-    translation._drawCodon(codons[0].start, codons[0].aminoAcid, codons[0].isStart, codons[0].isStop, 100, 15);
-    expect(drawElement).toHaveBeenCalledWith(expect.objectContaining({
+    const layout = translation._layoutForScale(0.6);
+    translation._drawCodon(codons[0].start, codons[0].aminoAcid, codons[0].isStart, codons[0].isStop, 100, layout);
+    expect(drawElement).toHaveBeenNthCalledWith(1, expect.objectContaining({
       color: 'rgba(209,250,229,1)',
+      width: layout.highlightHeight,
       showBorder: true,
       borderColor: 'rgba(5,150,105,1)',
+      borderThickness: layout.highlightBorderWidth,
     }));
     expect(pointForBp).toHaveBeenLastCalledWith(codons[0].start + 1, 100);
     expect(translate).toHaveBeenLastCalledWith(12, 34);
     expect(rotate).toHaveBeenCalled();
     expect(fillText).toHaveBeenLastCalledWith(codons[0].aminoAcid, 0, 0);
-    translation._drawCodon(codons[1].start, codons[1].aminoAcid, codons[1].isStart, codons[1].isStop, 100, 15);
+    translation._drawCodon(codons[1].start, codons[1].aminoAcid, codons[1].isStart, codons[1].isStop, 100, layout);
     expect(drawElement).toHaveBeenLastCalledWith(expect.objectContaining({
       color: 'rgba(254,226,226,1)',
       showBorder: true,
@@ -240,15 +245,13 @@ describe('SequenceTranslation', () => {
     }));
 
     translation.update({highlightStartCodons: false, highlightStopCodons: false});
-    translation._drawCodon(codons[0].start, codons[0].aminoAcid, codons[0].isStart, codons[0].isStop, 100, 15);
-    expect(drawElement).toHaveBeenLastCalledWith(expect.objectContaining({
-      color: translation.backgroundColor.rgbaString,
-      showBorder: false,
-    }));
+    const drawCountBeforeDisabledHighlight = drawElement.mock.calls.length;
+    translation._drawCodon(codons[0].start, codons[0].aminoAcid, codons[0].isStart, codons[0].isStop, 100, layout);
+    expect(drawElement).toHaveBeenCalledTimes(drawCountBeforeDisabledHighlight);
 
     const circularRotateCount = rotate.mock.calls.length;
     cgv.format = 'linear';
-    translation._drawCodon(codons[0].start, codons[0].aminoAcid, false, false, 100, 15);
+    translation._drawCodon(codons[0].start, codons[0].aminoAcid, false, false, 100, layout);
     expect(rotate).toHaveBeenCalledTimes(circularRotateCount);
     expect(fillText).toHaveBeenLastCalledWith(codons[0].aminoAcid, 12, 34);
   });
@@ -270,5 +273,8 @@ describe('SequenceTranslation', () => {
     expect(visitCodons).toHaveBeenCalledTimes(6);
     expect(drawElement.mock.calls.length).toBeGreaterThan(0);
     expect(drawElement.mock.calls.length).toBeLessThanOrEqual(192);
+    expect(drawElement.mock.calls.filter(call =>
+      call[0].color === translation.backgroundColor.rgbaString
+    )).toHaveLength(6);
   });
 });

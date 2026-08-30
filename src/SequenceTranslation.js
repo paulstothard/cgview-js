@@ -272,9 +272,15 @@ class SequenceTranslation extends CGObject {
    * @private
    */
   _layoutForScale(scaleFactor) {
+    const highlightPadding = 0.75 * scaleFactor;
     const laneHeight = this.laneHeight * scaleFactor;
     const laneSpacing = this.laneSpacing * scaleFactor;
     const edgePadding = this.edgePadding * scaleFactor;
+    // Highlight cells hug the scaled glyph box instead of filling the lane.
+    // Their border uses the same detail scale, so the visual proportions do
+    // not change while zooming through the sequence-detail transition.
+    const highlightHeight = (this.font.height * scaleFactor) + (2 * highlightPadding);
+    const highlightBorderWidth = scaleFactor;
     const laneStep = laneHeight + laneSpacing;
     const sequenceHalfThickness = this.sequence.baseThickness * scaleFactor / 2;
     const firstLaneCenterOffset = sequenceHalfThickness + edgePadding + (laneHeight / 2);
@@ -284,6 +290,8 @@ class SequenceTranslation extends CGObject {
       laneHeight,
       laneSpacing,
       edgePadding,
+      highlightHeight,
+      highlightBorderWidth,
       laneStep,
       firstLaneCenterOffset,
       outerLaneEdgeOffset,
@@ -399,35 +407,55 @@ class SequenceTranslation extends CGObject {
     return codons;
   }
 
-  _drawCodon(start, aminoAcid, isStart, isStop, centerOffset, width) {
-    let backgroundColor = this.backgroundColor;
+  _drawLaneBackground(contig, segments, centerOffset, width) {
+    for (const [localStart, localStop] of segments) {
+      this.canvas.drawElement({
+        layer: 'map',
+        start: contig.lengthOffset + localStart,
+        stop: contig.lengthOffset + localStop,
+        centerOffset,
+        color: this.backgroundColor.rgbaString,
+        width,
+        decoration: 'arc',
+        showShading: false,
+        showBorder: false,
+        minArcLength: 0,
+      });
+    }
+  }
+
+  _drawCodon(start, aminoAcid, isStart, isStop, centerOffset, layout) {
+    let highlightColor;
     let textColor = this.color;
     let borderColor;
     // Stop styling takes precedence for any unusual table that classifies a
     // codon as both a start and a stop.
     if (isStop && this.highlightStopCodons) {
-      backgroundColor = this.stopColor;
+      highlightColor = this.stopColor;
       textColor = this.stopTextColor;
       borderColor = this.stopBorderColor;
     } else if (isStart && this.highlightStartCodons) {
-      backgroundColor = this.startColor;
+      highlightColor = this.startColor;
       textColor = this.startTextColor;
       borderColor = this.startBorderColor;
     }
 
-    this.canvas.drawElement({
-      layer: 'map',
-      start,
-      stop: start + 2,
-      centerOffset,
-      color: backgroundColor.rgbaString,
-      width,
-      decoration: 'arc',
-      showShading: false,
-      showBorder: Boolean(borderColor),
-      borderColor: borderColor?.rgbaString,
-      minArcLength: 0,
-    });
+    if (highlightColor) {
+      this.canvas.drawElement({
+        layer: 'map',
+        start,
+        stop: start + 2,
+        centerOffset,
+        color: highlightColor.rgbaString,
+        width: layout.highlightHeight,
+        decoration: 'arc',
+        showShading: false,
+        showBorder: true,
+        borderColor: borderColor.rgbaString,
+        borderThickness: layout.highlightBorderWidth,
+        minArcLength: 0,
+      });
+    }
 
     const ctx = this.canvas.context('map');
     const middle = start + 1;
@@ -469,8 +497,9 @@ class SequenceTranslation extends CGObject {
         for (let frame = 1; frame <= this.lanesPerStrand; frame++) {
           const laneCenterOffset = layout.firstLaneCenterOffset + ((frame - 1) * layout.laneStep);
           const centerOffset = backboneCenterOffset + (strand * laneCenterOffset);
+          this._drawLaneBackground(contig, segments, centerOffset, layout.laneHeight);
           this._forEachCodon(contig, segments, strand, frame, codonTable, (start, codon, aminoAcid, isStart, isStop) => {
-            this._drawCodon(start, aminoAcid, isStart, isStop, centerOffset, layout.laneHeight);
+            this._drawCodon(start, aminoAcid, isStart, isStop, centerOffset, layout);
           });
         }
       }

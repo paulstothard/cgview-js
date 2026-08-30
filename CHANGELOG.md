@@ -17,6 +17,7 @@
 - Added a focused zoom-detail map and live controls to the test page.
 - Updated the test page to select and reposition feature tracks from any loaded map.
 - Avoided translation redraws and layout recalculation below the sequence-detail threshold.
+- Kept start/stop translation highlights inset and proportionally bordered while zooming.
 - Fixed transient hover highlights and popovers remaining visible after the pointer leaves the Viewer.
 
 

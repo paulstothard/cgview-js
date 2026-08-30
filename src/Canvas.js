@@ -261,6 +261,8 @@ class Canvas {
    *   [Default: value from settings {@link Settings#showBorder}]
    * @param {String} [options.borderColor] - Border color
    *   [Default: value from settings {@link Settings#borderColor}]
+   * @param {Number} [options.borderThickness] - Final border width in screen
+   *   pixels. When omitted, the zoom-scaled value from settings is used.
    * @param {Boolean} [options.fast=false] - Fast drawing mode
    * @param {Boolean} [options.selected=false] - Is the element selected
    * @param {Number} [options.minArcLength] - Minimum arc length in pixels
@@ -310,6 +312,7 @@ class Canvas {
       showShading = settings.showShading,
       showBorder = settings.showBorder,
       borderColor = settings.borderColor.rgbaString,
+      borderThickness,
       fast = false,
       selected = false,
       minArcLength = this.viewer.legend.defaultMinArcLength,
@@ -329,11 +332,14 @@ class Canvas {
     const shadowColorDiff = 0.15;
 
     // Border settings
-    let borderWidth = settings.borderThickness;
+    let borderWidth = borderThickness === undefined ?
+      settings.borderThickness : Math.max(0, Number(borderThickness) || 0);
     let selectedBorderDash = [3, 1];
-    // Above this zoom factor, border width will not increase
-    const zoomFactorMaxForBorder = 2;
-    borderWidth = (Math.min(this.viewer.zoomFactor, zoomFactorMaxForBorder) * (borderWidth/ zoomFactorMaxForBorder));
+    if (borderThickness === undefined) {
+      // Above this zoom factor, border width will not increase.
+      const zoomFactorMaxForBorder = 2;
+      borderWidth = (Math.min(this.viewer.zoomFactor, zoomFactorMaxForBorder) * (borderWidth / zoomFactorMaxForBorder));
+    }
 
     // TODO:
     // - skip border for fast draw
