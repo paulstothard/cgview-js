@@ -683,6 +683,61 @@ class Canvas {
   }
 
   /**
+   * Draw measured glyphs along the exact circular map path. Callers retain
+   * responsibility for text measurement and caching; this method centralizes
+   * the shared circular geometry used by ruler and inline feature labels.
+   * @param {Object} options - Curved-text drawing options.
+   * @return {Boolean} Whether the text was drawn.
+   * @private
+   */
+  drawTextAlongArc(options = {}) {
+    const {
+      layer = 'map',
+      bp,
+      centerOffset,
+      characters = [],
+      widths = [],
+      widthScale = 1,
+      totalWidth,
+      font,
+      color,
+    } = options;
+    const pixelsPerBp = this.pixelsPerBp(centerOffset);
+    if (!Number.isFinite(pixelsPerBp) || pixelsPerBp <= 0 || characters.length === 0) {
+      return false;
+    }
+
+    const tau = Math.PI * 2;
+    let centerAngle = this.viewer.scale.bp(bp) % tau;
+    if (centerAngle < 0) { centerAngle += tau; }
+    const flipped = centerAngle > 0 && centerAngle < Math.PI;
+    const textDirection = flipped ? -1 : 1;
+    let cursor = -totalWidth / 2;
+    const ctx = this.context(layer);
+
+    ctx.save();
+    ctx.font = font;
+    ctx.fillStyle = color;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let index = 0; index < characters.length; index += 1) {
+      const width = widths[index] * widthScale;
+      const pixelOffset = cursor + (width / 2);
+      const glyphBp = bp + (textDirection * pixelOffset / pixelsPerBp);
+      const point = this.pointForBp(glyphBp, centerOffset);
+      const angle = this.viewer.scale.bp(glyphBp) + (Math.PI / 2) + (flipped ? Math.PI : 0);
+      ctx.save();
+      ctx.translate(point.x, point.y);
+      ctx.rotate(angle);
+      ctx.fillText(characters[index], 0, 0);
+      ctx.restore();
+      cursor += width;
+    }
+    ctx.restore();
+    return true;
+  }
+
+  /**
    * This method adds a path to the canvas and uses the underlying Layout for the actual drawing.
    * For circular layouts the path is usually an arc, however, if the zoomFactor is very large,
    * the arc is added as a straight line.

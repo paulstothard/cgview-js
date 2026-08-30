@@ -43,16 +43,16 @@ import * as d3 from 'd3';
  * [font](#font)                    | String    | A string describing the font [Default: 'sans-serif, plain, 10']. See {@link Font} for details.
  * [color](#color)                  | String    | A string describing the color [Default: 'black']. See {@link Color} for details.
  * [labelPosition](#labelPosition)  | String    | Ruler sides that receive labels: 'inner', 'outer', 'both', or 'none' [Default: 'inner']
- * [labelStyle](#labelStyle)        | String    | Label orientation: 'default' or 'tangential' [Default: 'default']
+ * [labelStyle](#labelStyle)        | String    | Label orientation: 'default', 'tangential', or 'curved' [Default: 'default']
  * [visible](CGObject.html#visible) | Boolean   | Rulers are visible [Default: true]
  * [meta](CGObject.html#meta)       | Object    | [Meta data](../tutorials/details-meta-data.html) for ruler
  *
  * ### Examples
  * ```js
- * // Outer tangential labels with a tick-only inner ruler.
+ * // Outer labels that follow the circular ruler, with a tick-only inner ruler.
  * cgv.ruler.update({
  *   labelPosition: 'outer',
- *   labelStyle: 'tangential'
+ *   labelStyle: 'curved'
  * });
  * ```
  *
@@ -68,6 +68,7 @@ class Ruler extends CGObject {
    */
   constructor(viewer, options = {}, meta = {}) {
     super(viewer, options, meta);
+    this._curvedLabelMeasurementCache = new Map();
     this.tickCount = utils.defaultFor(options.tickCount, 10);
     this.tickWidth = utils.defaultFor(options.tickWidth, 1);
     this.tickLength = utils.defaultFor(options.tickLength, 4);
@@ -103,6 +104,7 @@ class Ruler extends CGObject {
     } else {
       this._font = new Font(value);
     }
+    this._curvedLabelMeasurementCache?.clear();
   }
 
   /**
@@ -173,14 +175,14 @@ class Ruler extends CGObject {
   }
 
   /**
-   * @member {String} - Label orientation: 'default' or 'tangential'.
+   * @member {String} - Label orientation: 'default', 'tangential', or 'curved'.
    */
   get labelStyle() {
     return this._labelStyle;
   }
 
   set labelStyle(value) {
-    this._labelStyle = ['default', 'tangential'].includes(value) ? value : 'default';
+    this._labelStyle = ['default', 'tangential', 'curved'].includes(value) ? value : 'default';
   }
 
   /**
@@ -386,6 +388,10 @@ class Ruler extends CGObject {
     const ctx = this.canvas.context('map');
     // Put space between number and units
     label = label.replace(/([kM])?$/, ' $1bp');
+    if (this.labelStyle === 'curved' && this.viewer.format === 'circular') {
+      this.drawCurvedLabel(bp, label, centerOffset, position);
+      return;
+    }
     if (this.labelStyle === 'tangential' && this.viewer.format === 'circular') {
       this.drawTangentialLabel(bp, label, centerOffset, position);
       return;
@@ -417,6 +423,54 @@ class Ruler extends CGObject {
     ctx.textBaseline = 'alphabetic';
     ctx.fillText(label, 0, this.font.height * 0.35);
     ctx.restore();
+  }
+
+  /**
+   * Measure the glyphs used by a curved label. Ruler labels repeat across full
+   * and fast draws, so cache the small set of formatted tick strings.
+   * @private
+   */
+  _curvedLabelMeasurement(ctx, label) {
+    const key = `${this.font.css}\n${label}`;
+    let measurement = this._curvedLabelMeasurementCache.get(key);
+    if (!measurement) {
+      ctx.font = this.font.css;
+      const characters = Array.from(label);
+      const widths = characters.map(character => Math.max(1, ctx.measureText(character).width));
+      measurement = {
+        characters,
+        widths,
+        totalWidth: widths.reduce((sum, width) => sum + width, 0),
+      };
+      if (this._curvedLabelMeasurementCache.size >= 64) {
+        this._curvedLabelMeasurementCache.clear();
+      }
+      this._curvedLabelMeasurementCache.set(key, measurement);
+    }
+    return measurement;
+  }
+
+  /**
+   * Draw each glyph tangent to the exact ruler circumference. Labels on the
+   * lower semicircle reverse their path and rotate 180 degrees so the text
+   * remains naturally readable.
+   * @private
+   */
+  drawCurvedLabel(bp, label, centerOffset, position) {
+    const ctx = this.canvas.context('map');
+    const radialDirection = position === 'inner' ? -1 : 1;
+    const labelCenterOffset = centerOffset +
+      radialDirection * (this.rulerPadding + (this.font.height / 2));
+    const measurement = this._curvedLabelMeasurement(ctx, label);
+    this.canvas.drawTextAlongArc({
+      bp,
+      centerOffset: labelCenterOffset,
+      characters: measurement.characters,
+      widths: measurement.widths,
+      totalWidth: measurement.totalWidth,
+      font: this.font.css,
+      color: this.color.rgbaString,
+    });
   }
 
   invertColors() {

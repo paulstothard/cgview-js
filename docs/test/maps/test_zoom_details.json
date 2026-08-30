@@ -22,7 +22,7 @@
       "font": "sans-serif,plain,10",
       "color": "rgba(45,49,55,1)",
       "labelPosition": "outer",
-      "labelStyle": "tangential"
+      "labelStyle": "curved"
     },
     "annotation": {
       "font": "sans-serif,bold,13",

@@ -9,18 +9,18 @@ describe('Zoom detail options', () => {
     document.body.innerHTML = '<div id="map"></div>';
   });
 
-  test('serializes and updates the outer tangential ruler configuration', () => {
+  test('serializes and updates the outer curved ruler configuration', () => {
     const cgv = new Viewer('#map', {
-      ruler: {labelPosition: 'outer', labelStyle: 'tangential'},
+      ruler: {labelPosition: 'outer', labelStyle: 'curved'},
     });
 
     expect(cgv.ruler.labelPosition).toBe('outer');
-    expect(cgv.ruler.labelStyle).toBe('tangential');
+    expect(cgv.ruler.labelStyle).toBe('curved');
 
     cgv.ruler.update({labelPosition: 'both', tickLength: 7});
     const json = cgv.ruler.toJSON();
     expect(json.labelPosition).toBe('both');
-    expect(json.labelStyle).toBe('tangential');
+    expect(json.labelStyle).toBe('curved');
     expect(json.tickLength).toBe(7);
   });
 
@@ -28,6 +28,58 @@ describe('Zoom detail options', () => {
     const cgv = new Viewer('#map');
     expect(cgv.ruler.labelPosition).toBe('inner');
     expect(cgv.ruler.labelStyle).toBe('default');
+  });
+
+  test('preserves the existing straight tangential ruler style', () => {
+    const cgv = new Viewer('#map', {
+      ruler: {labelPosition: 'outer', labelStyle: 'tangential'},
+    });
+    expect(cgv.ruler.labelStyle).toBe('tangential');
+    expect(cgv.ruler.toJSON().labelStyle).toBe('tangential');
+  });
+
+  test('curves circular ruler labels one glyph at a time', () => {
+    const cgv = new Viewer('#map', {
+      width: 800,
+      height: 600,
+      sequence: {length: 1000},
+      ruler: {font: 'sans-serif, plain, 14', labelPosition: 'outer', labelStyle: 'curved'},
+    });
+    const ctx = cgv.canvas.context('map');
+    ctx.fillText.mockClear();
+    ctx.measureText.mockClear();
+    ctx.rotate.mockClear();
+    ctx.translate.mockClear();
+
+    cgv.ruler.drawLabel(250, '250', 150, 'outer');
+
+    expect(ctx.fillText.mock.calls.map(call => call[0])).toEqual(Array.from('250 bp'));
+    expect(ctx.measureText).toHaveBeenCalledTimes(Array.from('250 bp').length);
+    expect(ctx.rotate).toHaveBeenCalledTimes(Array.from('250 bp').length);
+    expect(new Set(ctx.rotate.mock.calls.map(call => call[0])).size).toBeGreaterThan(1);
+
+    ctx.measureText.mockClear();
+    cgv.ruler.drawLabel(250, '250', 150, 'outer');
+    expect(ctx.measureText).not.toHaveBeenCalled();
+  });
+
+  test('keeps curved-style ruler labels straight in linear maps', () => {
+    const cgv = new Viewer('#map', {
+      width: 800,
+      height: 600,
+      sequence: {length: 1000},
+      ruler: {font: 'sans-serif, plain, 14', labelPosition: 'outer', labelStyle: 'curved'},
+    });
+    cgv.format = 'linear';
+    const ctx = cgv.canvas.context('map');
+    ctx.fillText.mockClear();
+    ctx.rotate.mockClear();
+
+    cgv.ruler.drawLabel(250, '250', 150, 'outer');
+
+    expect(ctx.fillText).toHaveBeenCalledTimes(1);
+    expect(ctx.fillText).toHaveBeenCalledWith('250 bp', expect.any(Number), expect.any(Number));
+    expect(ctx.rotate).not.toHaveBeenCalled();
   });
 
   test('keeps feature direction indicators opt-in and serializes the setting', () => {

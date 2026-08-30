@@ -287,13 +287,6 @@ class FeatureLabelRenderer {
     }
   }
 
-  _arcIsUpsideDown(bp) {
-    const tau = Math.PI * 2;
-    let angle = this.viewer.scale.bp(bp) % tau;
-    if (angle < 0) { angle += tau; }
-    return angle > 0 && angle < Math.PI;
-  }
-
   _glyphPlan(ctx, feature, metrics) {
     const font = feature.label.font;
     const scale = metrics.fontSize / font.size;
@@ -395,26 +388,16 @@ class FeatureLabelRenderer {
   _drawCurvedLabel(ctx, feature, metrics) {
     const plan = this._glyphPlan(ctx, feature, metrics);
     if (!plan) { return; }
-    const flipped = this._arcIsUpsideDown(metrics.bp);
-    const direction = flipped ? -1 : 1;
-    let cursor = -plan.totalWidth / 2;
-
-    ctx.fillStyle = metrics.color.rgbaString;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    for (let index = 0; index < plan.characters.length; index += 1) {
-      const width = plan.widths[index] * plan.scale;
-      const pixelOffset = cursor + (width / 2);
-      const glyphBp = metrics.bp + (direction * pixelOffset / metrics.pixelsPerBp);
-      const point = this.canvas.pointForBp(glyphBp, metrics.centerOffset);
-      const angle = this.viewer.scale.bp(glyphBp) + (Math.PI / 2) + (flipped ? Math.PI : 0);
-      ctx.save();
-      ctx.translate(point.x, point.y);
-      ctx.rotate(angle);
-      ctx.fillText(plan.characters[index], 0, 0);
-      ctx.restore();
-      cursor += width;
-    }
+    this.canvas.drawTextAlongArc({
+      bp: metrics.bp,
+      centerOffset: metrics.centerOffset,
+      characters: plan.characters,
+      widths: plan.widths,
+      widthScale: plan.scale,
+      totalWidth: plan.totalWidth,
+      font: ctx.font,
+      color: metrics.color.rgbaString,
+    });
   }
 
   draw(features, centerOffset, slotThickness, visibleRange, slot) {
