@@ -956,6 +956,26 @@ class Sequence extends CGObject {
     return Array(length + 1).join('•');
   }
 
+  /**
+   * Draw one zoom-detail base. Circular glyphs follow the local map tangent
+   * while remaining upright; linear glyphs retain their horizontal baseline.
+   * @private
+   */
+  _drawBase(ctx, base, bp, centerOffset, baselineOffset, tangentialAngle) {
+    const origin = this.canvas.pointForBp(bp, centerOffset);
+    if (this.viewer.format === 'circular') {
+      const angle = tangentialAngle === undefined ?
+        this.canvas.tangentialTextOrientationForBp(bp).angle : tangentialAngle;
+      ctx.save();
+      ctx.translate(origin.x, origin.y);
+      ctx.rotate(angle);
+      ctx.fillText(base, 0, baselineOffset);
+      ctx.restore();
+    } else {
+      ctx.fillText(base, origin.x, origin.y + baselineOffset);
+    }
+  }
+
   draw() {
     const pixelsPerBp = this.viewer.backbone.pixelsPerBp();
     if (!this.isDetailVisible(pixelsPerBp)) { return; }
@@ -986,13 +1006,10 @@ class Sequence extends CGObject {
       // Distance from the center of the backbone to place sequence text
       const centerOffsetDiff = ((this.bpSpacing / 2) + this.bpMargin) * scaleFactor;
       for (let i = 0, len = range.length; i < len; i++) {
-        let origin = this.canvas.pointForBp(bp, centerOffset + centerOffsetDiff);
-        // if (i == 0) { console.log(bp, origin)}
-        // ctx.fillText(seq[i], origin.x, origin.y);
-        ctx.fillText(seq[i], origin.x, origin.y + yOffset);
-        origin = this.canvas.pointForBp(bp, centerOffset - centerOffsetDiff);
-        // ctx.fillText(complement[i], origin.x, origin.y);
-        ctx.fillText(complement[i], origin.x, origin.y + yOffset);
+        const tangentialAngle = this.viewer.format === 'circular' ?
+          this.canvas.tangentialTextOrientationForBp(bp).angle : undefined;
+        this._drawBase(ctx, seq[i], bp, centerOffset + centerOffsetDiff, yOffset, tangentialAngle);
+        this._drawBase(ctx, complement[i], bp, centerOffset - centerOffsetDiff, yOffset, tangentialAngle);
         bp++;
       }
       ctx.restore();

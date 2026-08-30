@@ -476,12 +476,7 @@ class Ruler extends CGObject {
     const ctx = this.canvas.context('map');
     const direction = position === 'inner' ? -1 : 1;
     const point = this.canvas.pointForBp(bp, centerOffset + direction * (this.rulerPadding + (this.font.height / 2)));
-    let angle = this.viewer.scale.bp(bp) + (Math.PI / 2);
-    while (angle > Math.PI) { angle -= Math.PI * 2; }
-    while (angle <= -Math.PI) { angle += Math.PI * 2; }
-    if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
-      angle += Math.PI;
-    }
+    const {angle} = this.canvas.tangentialTextOrientationForBp(bp);
     ctx.save();
     ctx.translate(point.x, point.y);
     ctx.rotate(angle);

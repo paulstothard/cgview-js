@@ -462,12 +462,7 @@ class SequenceTranslation extends CGObject {
     const origin = this.canvas.pointForBp(middle, centerOffset);
     ctx.fillStyle = textColor.rgbaString;
     if (this.viewer.format === 'circular') {
-      let angle = this.viewer.scale.bp(middle) + (Math.PI / 2);
-      while (angle > Math.PI) { angle -= Math.PI * 2; }
-      while (angle <= -Math.PI) { angle += Math.PI * 2; }
-      if (angle > Math.PI / 2 || angle < -Math.PI / 2) {
-        angle += Math.PI;
-      }
+      const {angle} = this.canvas.tangentialTextOrientationForBp(middle);
       ctx.save();
       ctx.translate(origin.x, origin.y);
       ctx.rotate(angle);

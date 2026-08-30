@@ -717,10 +717,7 @@ class Canvas {
       return false;
     }
 
-    const tau = Math.PI * 2;
-    let centerAngle = this.viewer.scale.bp(bp) % tau;
-    if (centerAngle < 0) { centerAngle += tau; }
-    const flipped = centerAngle > 0 && centerAngle < Math.PI;
+    const {flipped} = this.tangentialTextOrientationForBp(bp);
     const textDirection = flipped ? -1 : 1;
     let cursor = -totalWidth / 2;
     const ctx = this.context(layer);
@@ -742,6 +739,8 @@ class Canvas {
       const pixelOffset = cursor + (width / 2);
       const glyphBp = bp + (textDirection * pixelOffset / pixelsPerBp);
       const point = this.pointForBp(glyphBp, centerOffset);
+      // Keep the center glyph's flip direction for the complete label so text
+      // crossing a vertical tangent cannot reverse partway through a word.
       const angle = this.viewer.scale.bp(glyphBp) + (Math.PI / 2) + (flipped ? Math.PI : 0);
       ctx.save();
       ctx.translate(point.x, point.y);
@@ -815,6 +814,31 @@ class Canvas {
    */
   pointForBp(bp, centerOffset) {
     return this.layout.pointForBp(bp, centerOffset);
+  }
+
+  /**
+   * Return the readable tangential orientation for text at a circular-map
+   * position. The angle stays within a quarter turn of horizontal so glyphs
+   * never render upside down. The flipped flag lets multi-glyph callers
+   * preserve reading order when the tangent reverses.
+   * @param {Number} bp - Base-pair position.
+   * @return {Object} Tangential angle in radians and whether it was flipped.
+   * @private
+   */
+  tangentialTextOrientationForBp(bp) {
+    let angle = this.viewer.scale.bp(bp) + (Math.PI / 2);
+    while (angle > Math.PI) { angle -= Math.PI * 2; }
+    while (angle <= -Math.PI) { angle += Math.PI * 2; }
+
+    let flipped = false;
+    if (angle > Math.PI / 2) {
+      angle -= Math.PI;
+      flipped = true;
+    } else if (angle < -Math.PI / 2) {
+      angle += Math.PI;
+      flipped = true;
+    }
+    return {angle, flipped};
   }
 
   /**

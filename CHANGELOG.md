@@ -20,6 +20,7 @@
 - Kept start/stop translation highlights inset and proportionally bordered while zooming.
 - Fixed transient hover highlights and popovers remaining visible after the pointer leaves the Viewer.
 - Hid the center line by default and added a test-page toolbar toggle for it.
+- Aligned zoomed circular DNA bases to a shared upright tangential text orientation.
 
 
 ## 1.8.2 - 2026-05-04 - Paper Release
