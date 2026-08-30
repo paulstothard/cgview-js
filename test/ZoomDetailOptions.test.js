@@ -14,7 +14,6 @@ describe('Zoom detail options', () => {
       ruler: {
         labelPosition: 'outer',
         labelStyle: 'curved',
-        showLabelHalo: true,
         labelHaloColor: 'rgba(240,240,240,0.9)',
         labelHaloWidth: 4,
       },
@@ -22,7 +21,6 @@ describe('Zoom detail options', () => {
 
     expect(cgv.ruler.labelPosition).toBe('outer');
     expect(cgv.ruler.labelStyle).toBe('curved');
-    expect(cgv.ruler.showLabelHalo).toBe(true);
     expect(cgv.ruler.labelHaloWidth).toBe(4);
 
     cgv.ruler.update({labelPosition: 'both', tickLength: 7});
@@ -30,7 +28,6 @@ describe('Zoom detail options', () => {
     expect(json.labelPosition).toBe('both');
     expect(json.labelStyle).toBe('curved');
     expect(json.tickLength).toBe(7);
-    expect(json.showLabelHalo).toBe(true);
     expect(json.labelHaloColor).toBe('rgba(240,240,240,0.9)');
     expect(json.labelHaloWidth).toBe(4);
   });
@@ -39,15 +36,20 @@ describe('Zoom detail options', () => {
     const cgv = new Viewer('#map');
     expect(cgv.ruler.labelPosition).toBe('inner');
     expect(cgv.ruler.labelStyle).toBe('default');
-    expect(cgv.ruler.showLabelHalo).toBe(false);
     expect(cgv.ruler.labelHaloWidth).toBe(3);
     expect(cgv.ruler.toJSON().labelHaloColor).toBeUndefined();
+    expect(cgv.ruler.toJSON().showLabelHalo).toBeUndefined();
+
+    const ctx = cgv.canvas.context('map');
+    ctx.strokeText.mockClear();
+    cgv.ruler.drawLabel(250, '250', 150, 'inner');
+    expect(ctx.strokeText).not.toHaveBeenCalled();
   });
 
   test('uses the live map background for an automatic ruler-label halo', () => {
     const cgv = new Viewer('#map', {
       settings: {backgroundColor: '#f8fafc'},
-      ruler: {showLabelHalo: true},
+      ruler: {labelStyle: 'curved'},
     });
 
     expect(cgv.ruler.labelHaloColor).toBe(cgv.settings.backgroundColor);
@@ -60,7 +62,7 @@ describe('Zoom detail options', () => {
 
   test('inverts an explicit ruler-label halo with the ruler palette', () => {
     const cgv = new Viewer('#map', {
-      ruler: {color: 'black', showLabelHalo: true, labelHaloColor: 'white'},
+      ruler: {color: 'black', labelStyle: 'curved', labelHaloColor: 'white'},
     });
 
     cgv.ruler.invertColors();
@@ -77,7 +79,7 @@ describe('Zoom detail options', () => {
     expect(cgv.ruler.toJSON().labelStyle).toBe('tangential');
   });
 
-  test('curves circular ruler labels one glyph at a time', () => {
+  test('curves both circular ruler halo and fill one glyph at a time', () => {
     const cgv = new Viewer('#map', {
       width: 800,
       height: 600,
@@ -94,7 +96,10 @@ describe('Zoom detail options', () => {
 
     expect(ctx.fillText.mock.calls.map(call => call[0])).toEqual(Array.from('250 bp'));
     expect(ctx.measureText).toHaveBeenCalledTimes(Array.from('250 bp').length);
-    expect(ctx.rotate).toHaveBeenCalledTimes(Array.from('250 bp').length);
+    const glyphCount = Array.from('250 bp').length;
+    expect(ctx.rotate).toHaveBeenCalledTimes(glyphCount * 2);
+    expect(ctx.rotate.mock.calls.slice(0, glyphCount))
+      .toEqual(ctx.rotate.mock.calls.slice(glyphCount));
     expect(new Set(ctx.rotate.mock.calls.map(call => call[0])).size).toBeGreaterThan(1);
 
     ctx.measureText.mockClear();
@@ -112,7 +117,6 @@ describe('Zoom detail options', () => {
         font: 'sans-serif, plain, 14',
         labelPosition: 'outer',
         labelStyle: 'curved',
-        showLabelHalo: true,
         labelHaloWidth: 3,
       },
     });
@@ -150,7 +154,7 @@ describe('Zoom detail options', () => {
   test('protects straight linear ruler labels with one halo stroke', () => {
     const cgv = new Viewer('#map', {
       sequence: {length: 1000},
-      ruler: {labelStyle: 'curved', showLabelHalo: true},
+      ruler: {labelStyle: 'curved'},
     });
     cgv.format = 'linear';
     const ctx = cgv.canvas.context('map');

@@ -23,7 +23,6 @@
       "color": "rgba(45,49,55,1)",
       "labelPosition": "outer",
       "labelStyle": "curved",
-      "showLabelHalo": true,
       "labelHaloWidth": 3
     },
     "annotation": {
