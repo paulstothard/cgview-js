@@ -112,10 +112,12 @@ describe('Plot rendering', () => {
     jest.spyOn(cgv.canvas, 'pixelsPerBp').mockReturnValue(0.2);
     const context = cgv.canvas.context('map');
     context.lineTo.mockClear();
+    context.fill.mockClear();
     context.stroke.mockClear();
 
     plot.draw(cgv.canvas, 100, 40, false, {start: 1, stop: 17});
 
+    expect(context.fill).toHaveBeenCalledTimes(1);
     expect(context.stroke).toHaveBeenCalledTimes(1);
     expect(context.lineTo.mock.calls.length).toBeGreaterThan(3);
     expect(context.lineTo.mock.calls.length).toBeLessThan(30);

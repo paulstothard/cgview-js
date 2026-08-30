@@ -191,11 +191,6 @@ class PlotRenderer {
     fillColor.opacity *= 0.92;
 
     ctx.save();
-    if (!fast) {
-      const envelopeColor = color.copy();
-      envelopeColor.opacity *= 0.1;
-      this._drawPlotEnvelope(ctx, canvas, geometry, envelopeColor, orientation);
-    }
     this._drawPlotFill(ctx, canvas, geometry, fillColor, orientation);
     if (!fast) {
       const contourColor = color.copy();
@@ -208,47 +203,6 @@ class PlotRenderer {
       this._drawPlotContour(ctx, canvas, geometry, contourColor, orientation);
     }
     ctx.restore();
-  }
-
-  _drawPlotEnvelope(ctx, canvas, geometry, color, orientation) {
-    const outerPoints = [];
-    const innerPoints = [];
-    let hasRange = false;
-    for (let i = 0; i < geometry.samples.length; i++) {
-      const sample = geometry.samples[i];
-      const bounds = this._orientedEnvelopeBounds(sample, orientation);
-      hasRange = hasRange || Math.abs(bounds.max - bounds.min) > 0.000001;
-      outerPoints.push(this._plotPoint(canvas, geometry, sample.bp, bounds.max));
-      innerPoints.push(this._plotPoint(canvas, geometry, sample.bp, bounds.min));
-    }
-    if (!hasRange || outerPoints.length < 2) { return; }
-
-    ctx.beginPath();
-    ctx.moveTo(outerPoints[0].x, outerPoints[0].y);
-    for (let i = 1; i < outerPoints.length; i++) {
-      ctx.lineTo(outerPoints[i].x, outerPoints[i].y);
-    }
-    for (let i = innerPoints.length - 1; i >= 0; i--) {
-      ctx.lineTo(innerPoints[i].x, innerPoints[i].y);
-    }
-    ctx.closePath();
-    ctx.fillStyle = color.rgbaString;
-    ctx.fill();
-  }
-
-  _orientedEnvelopeBounds(sample, orientation) {
-    if (orientation === 'positive') {
-      return {
-        min: Math.max(this.baseline, sample.min),
-        max: Math.max(this.baseline, sample.max),
-      };
-    } else if (orientation === 'negative') {
-      return {
-        min: Math.min(this.baseline, sample.min),
-        max: Math.min(this.baseline, sample.max),
-      };
-    }
-    return {min: sample.min, max: sample.max};
   }
 
   _drawPlotFill(ctx, canvas, geometry, color, orientation) {
