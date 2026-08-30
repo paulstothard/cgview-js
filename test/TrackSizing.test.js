@@ -80,6 +80,53 @@ describe('Track sizing', () => {
     expect(cgv.tracks(1).slots(1).proportionOfMap).toBeCloseTo(0.5);
   });
 
+  test('batches coordinated slider settings into one proportion calculation', () => {
+    const cgv = viewerWithTracks();
+    const calculateMaxMapThickness = jest.spyOn(cgv.layout, '_calculateMaxMapThickness');
+
+    cgv.layout.batchProportionUpdates(() => {
+      cgv.settings.update({
+        initialMapThicknessProportion: 0.15,
+        maxMapThicknessProportion: 0.75,
+        maxSlotThickness: 75,
+      });
+      cgv.tracks(1).update({thicknessRatio: 2});
+    }, {duration: 0});
+
+    expect(calculateMaxMapThickness).toHaveBeenCalledTimes(1);
+    expect(cgv.settings.initialMapThicknessProportion).toBe(0.15);
+    expect(cgv.settings.maxMapThicknessProportion).toBe(0.75);
+    expect(cgv.settings.maxSlotThickness).toBe(75);
+    expect(cgv.tracks(1).thicknessRatio).toBe(2);
+  });
+
+  test.each(['circular', 'linear'])('widens one track without squeezing its neighbour in %s maps', format => {
+    const cgv = viewerWithTracks({format});
+    const selectedTrack = cgv.tracks(1);
+    const otherTrack = cgv.tracks(2);
+    const selectedBefore = selectedTrack.slots(1).thickness;
+    const otherBefore = otherTrack.slots(1).thickness;
+    const currentRatioSum = cgv.layout.visibleSlots().reduce((sum, slot) => sum + slot.thicknessRatio, 0);
+    const nextRatioSum = currentRatioSum + 1;
+
+    cgv.layout.batchProportionUpdates(() => {
+      cgv.settings.update({
+        initialMapThicknessProportion: cgv.settings.initialMapThicknessProportion * nextRatioSum / currentRatioSum,
+        maxMapThicknessProportion: cgv.settings.maxMapThicknessProportion * nextRatioSum / currentRatioSum,
+        maxSlotThickness: 100,
+      });
+      selectedTrack.update({thicknessRatio: 2});
+    }, {duration: 0});
+
+    expect(selectedTrack.slots(1).thickness).toBeCloseTo(selectedBefore * 2);
+    expect(otherTrack.slots(1).thickness).toBeCloseTo(otherBefore);
+
+    cgv._zoomFactor = cgv.maxZoomFactor;
+    cgv.layout.updateLayout(true);
+    expect(selectedTrack.slots(1).thickness).toBeCloseTo(otherTrack.slots(1).thickness * 2);
+    expect(selectedTrack.slots(1).thickness).toBeLessThanOrEqual(100);
+  });
+
   test.each(['circular', 'linear'])('uses the lane cap while zooming in %s maps', format => {
     const cgv = viewerWithTracks({format, settings: {maxSlotThickness: 30, maxMapThicknessProportion: 0.8}});
     const slot = cgv.tracks(1).slots(1);

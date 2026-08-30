@@ -341,9 +341,12 @@ const trackSizingRatio = document.getElementById('track-sizing-ratio');
 const trackSizingRatioOutput = document.getElementById('track-sizing-ratio-output');
 const trackSizingReset = document.getElementById('track-sizing-reset');
 let trackSizingDrawFrame;
+let trackSizingScaleFrame;
+let pendingTrackSizingScale;
 let trackSizingBaseRatios = new WeakMap();
 let trackSizingBaseMaxSlotThickness = 50;
 let trackSizingUpdating = false;
+let trackSizingSelectedTrackID;
 
 const geneticCodeOptions = Object.entries(cgv.codonTables.names()).map(([id, name]) =>
   `<option value='${id}'>${id} — ${name}</option>`
@@ -359,12 +362,19 @@ function selectedFeatureTrack() {
 }
 
 function selectedSizingTrack() {
-  return cgv.tracks().find(track => track.cgvID === trackSizingSelect.value);
+  const selectedTrackID = trackSizingSelectedTrackID || trackSizingSelect.value;
+  return cgv.tracks().find(track => track.cgvID === selectedTrackID);
 }
 
 function resetTrackSizingState() {
+  if (trackSizingScaleFrame) { cancelAnimationFrame(trackSizingScaleFrame); }
+  if (trackSizingDrawFrame) { cancelAnimationFrame(trackSizingDrawFrame); }
+  trackSizingScaleFrame = undefined;
+  trackSizingDrawFrame = undefined;
+  pendingTrackSizingScale = undefined;
   trackSizingBaseRatios = new WeakMap();
   trackSizingBaseMaxSlotThickness = cgv.settings.maxSlotThickness;
+  trackSizingSelectedTrackID = undefined;
   cgv.tracks().forEach(track => trackSizingBaseRatios.set(track, track.thicknessRatio));
 }
 
@@ -381,6 +391,19 @@ function requestTrackSizingDraw() {
   }
   trackSizingDrawFrame = requestAnimationFrame(() => {
     trackSizingDrawFrame = undefined;
+    cgv.draw();
+    syncTrackSizingReadout();
+  });
+}
+
+function requestSelectedTrackScale(scale) {
+  pendingTrackSizingScale = scale;
+  if (trackSizingScaleFrame) { return; }
+  trackSizingScaleFrame = requestAnimationFrame(() => {
+    trackSizingScaleFrame = undefined;
+    const requestedScale = pendingTrackSizingScale;
+    pendingTrackSizingScale = undefined;
+    applySelectedTrackScale(requestedScale, {draw: false});
     cgv.draw();
     syncTrackSizingReadout();
   });
@@ -417,6 +440,7 @@ function syncTrackSizingReadout() {
   const hasVisibleLanes = track?.visible && track.slots().some(slot => slot.visible);
 
   trackSizingRatio.value = String(sliderValueForTrackScale(scale));
+  trackSizingRatio.style.setProperty('--track-sizing-progress', `${trackSizingRatio.value}%`);
   trackSizingRatio.disabled = !hasVisibleLanes;
   trackSizingRatioOutput.textContent = selectedTrackThicknessText();
   trackSizingRatio.title = hasVisibleLanes ? `Current thickness: ${trackSizingRatioOutput.textContent}` : 'This track has no visible lanes';
@@ -425,7 +449,7 @@ function syncTrackSizingReadout() {
 // Change one track without stealing space from the others. The layout stores
 // relative lane weights, so the total map space must grow by the matching ratio
 // and the zoom-time lane cap must follow the largest requested track scale.
-function applySelectedTrackScale(scale) {
+function applySelectedTrackScale(scale, options = {}) {
   const track = selectedSizingTrack();
   if (!track || !track.visible) { return; }
   const selectedSlots = track.slots().filter(slot => slot.visible);
@@ -444,22 +468,26 @@ function applySelectedTrackScale(scale) {
 
   trackSizingUpdating = true;
   try {
-    cgv.settings.update({
-      initialMapThicknessProportion: cgv.settings.initialMapThicknessProportion * availableSpaceScale,
-      maxMapThicknessProportion: cgv.settings.maxMapThicknessProportion * availableSpaceScale,
-      maxSlotThickness: trackSizingBaseMaxSlotThickness * largestTrackScale,
-    });
-    track.update({thicknessRatio: nextRatio});
+    cgv.layout.batchProportionUpdates(() => {
+      cgv.settings.update({
+        initialMapThicknessProportion: cgv.settings.initialMapThicknessProportion * availableSpaceScale,
+        maxMapThicknessProportion: cgv.settings.maxMapThicknessProportion * availableSpaceScale,
+        maxSlotThickness: trackSizingBaseMaxSlotThickness * largestTrackScale,
+      });
+      track.update({thicknessRatio: nextRatio});
+    }, {duration: 0});
   } finally {
     trackSizingUpdating = false;
   }
   syncTrackSizingReadout();
-  requestTrackSizingDraw();
+  if (options.draw !== false) {
+    requestTrackSizingDraw();
+  }
 }
 
 function syncTrackSizingControls() {
   const tracks = cgv.tracks();
-  const previousTrackID = trackSizingSelect.value;
+  const previousTrackID = trackSizingSelectedTrackID || trackSizingSelect.value;
   const selectedTrack = tracks.find(track => track.cgvID === previousTrackID) ||
     tracks.find(track => track.visible) ||
     tracks[0];
@@ -471,6 +499,7 @@ function syncTrackSizingControls() {
     return option;
   }));
   trackSizingSelect.value = selectedTrack?.cgvID || '';
+  trackSizingSelectedTrackID = selectedTrack?.cgvID;
   trackSizingSelect.disabled = tracks.length === 0;
   trackSizingReset.disabled = tracks.length === 0;
   syncTrackSizingReadout();
@@ -569,10 +598,14 @@ cgv.on('zoom.track-sizing-controls', () => {
   }
 });
 
-trackSizingSelect.addEventListener('change', syncTrackSizingReadout);
+trackSizingSelect.addEventListener('change', (e) => {
+  trackSizingSelectedTrackID = e.target.value;
+  syncTrackSizingReadout();
+});
 
 trackSizingRatio.addEventListener('input', (e) => {
-  applySelectedTrackScale(trackScaleForSliderValue(e.target.value));
+  e.target.style.setProperty('--track-sizing-progress', `${e.target.value}%`);
+  requestSelectedTrackScale(trackScaleForSliderValue(e.target.value));
 });
 
 trackSizingReset.addEventListener('click', () => {

@@ -59,6 +59,8 @@ class Layout {
     // Default values. These will be overridden by the values in Settings.
     this._maxMapThicknessProportion = 0.5;
     this._initialMapThicknessProportion = 0.1;
+    this._proportionUpdateDepth = 0;
+    this._proportionUpdatePending = false;
 
     // Setup scales
     this._scale = {};
@@ -594,6 +596,10 @@ class Layout {
    * @private
    */
   _adjustProportions(options = {}) {
+    if (this._proportionUpdateDepth > 0) {
+      this._proportionUpdatePending = true;
+      return;
+    }
     const viewer = this.viewer;
     if (viewer.loading) { return; }
     const duration = utils.defaultFor(options.duration, 500);
@@ -657,6 +663,27 @@ class Layout {
         viewer.scale.x.domain([domains[0], domains[1]]);
         viewer.scale.y.domain([domains[2], domains[3]]);
         viewer.trigger('zoom');
+      }
+    }
+  }
+
+  /**
+   * Run several synchronous thickness/layout updates and perform their shared
+   * proportion calculation once at the end. This is useful for interactive
+   * controls that coordinate track ratios with map-wide thickness settings.
+   * @param {Function} callback - Synchronous updates to apply.
+   * @param {Object} options - Options passed to the final proportion update.
+   * @return {*} The callback return value.
+   */
+  batchProportionUpdates(callback, options = {}) {
+    this._proportionUpdateDepth += 1;
+    try {
+      return callback();
+    } finally {
+      this._proportionUpdateDepth -= 1;
+      if (this._proportionUpdateDepth === 0 && this._proportionUpdatePending) {
+        this._proportionUpdatePending = false;
+        this._adjustProportions(options);
       }
     }
   }

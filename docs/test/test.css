@@ -134,21 +134,83 @@ hr {
   font-weight: 600;
   text-align: right;
 }
+.track-sizing-slider-wrap {
+  padding: 0 9px;
+}
 .track-sizing-primary-range {
+  --track-sizing-progress: 50%;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
   display: block;
+  height: 24px;
+  margin: 0;
+  outline: none;
   width: 100%;
-  margin: 2px 0 0;
+}
+.track-sizing-primary-range::-webkit-slider-runnable-track {
+  background: linear-gradient(to right,
+    #2878d0 0%,
+    #2878d0 var(--track-sizing-progress),
+    #d6dde5 var(--track-sizing-progress),
+    #d6dde5 100%);
+  border: 1px solid #aeb8c2;
+  border-radius: 999px;
+  height: 6px;
+}
+.track-sizing-primary-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #fff;
+  border: 3px solid #2878d0;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(20, 41, 61, 0.28);
+  height: 18px;
+  margin-top: -7px;
+  width: 18px;
+}
+.track-sizing-primary-range::-moz-range-track {
+  background: #d6dde5;
+  border: 1px solid #aeb8c2;
+  border-radius: 999px;
+  height: 6px;
+}
+.track-sizing-primary-range::-moz-range-progress {
+  background: #2878d0;
+  border-radius: 999px;
+  height: 6px;
+}
+.track-sizing-primary-range::-moz-range-thumb {
+  background: #fff;
+  border: 3px solid #2878d0;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(20, 41, 61, 0.28);
+  height: 12px;
+  width: 12px;
+}
+.track-sizing-primary-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px rgba(40, 120, 208, 0.2), 0 1px 3px rgba(20, 41, 61, 0.28);
+}
+.track-sizing-primary-range:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 4px rgba(40, 120, 208, 0.2), 0 1px 3px rgba(20, 41, 61, 0.28);
+}
+.track-sizing-primary-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 .track-sizing-range-hints {
   color: #6c757d;
   display: flex;
-  font-size: 10px;
+  font-size: 11px;
   justify-content: space-between;
-  margin-top: -2px;
+  margin: -1px 9px 0;
 }
 #track-sizing-reset {
   display: block;
-  margin: 6px auto 0;
+  font-size: 12px;
+  margin: 8px auto 0;
+  padding: 3px 10px;
 }
 .track-sizing-help {
   color: #6c757d;
