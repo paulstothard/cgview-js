@@ -909,8 +909,9 @@ class Layout {
     // let startTime = new Date().getTime();
 
     viewer.clear('map');
+    viewer.clear('foreground');
     viewer.clear('ui');
-    // Note: we clear the foreground in the drawForeground method
+    // drawForeground repopulates its layer after map data is complete.
 
     if (viewer.messenger.visible) {
       viewer.messenger.close();
@@ -931,16 +932,10 @@ class Layout {
 
     // Divider rings
     viewer.dividers.draw();
-    // Ruler
-    const rulerOffsetAdjustment = viewer.dividers.track.adjustedThickness;
-    viewer.ruler.draw(this.centerInsideOffset - rulerOffsetAdjustment, this.centerOutsideOffset + rulerOffsetAdjustment);
     // Labels
     if (viewer.annotation.visible) {
       viewer.annotation.draw(this.centerInsideOffset, this.centerOutsideOffset, fast);
     }
-
-    // Draw foreground layer (centerLine, captions/legend on map)
-    this.drawForeground();
 
     // Progess
     this.drawProgress();
@@ -966,6 +961,7 @@ class Layout {
     this.drawMapWithoutSlots(true);
     this.drawAllSlots(true);
     this.sequence.draw();
+    this.drawForeground();
     // Debug
     if (this.viewer.debug) {
       this.viewer.debug.data.time.fastDraw = utils.elapsedTime(startTime);
@@ -979,12 +975,14 @@ class Layout {
     this._drawFullStartTime = new Date().getTime();
     this.drawSlotWithTimeOut(this);
     this.sequence.draw();
+    this.drawForeground();
   }
 
   drawExport() {
     this.drawMapWithoutSlots();
     this.drawAllSlots(false);
     this.sequence.draw();
+    this.drawForeground();
   }
 
   draw(fast) {
@@ -998,6 +996,15 @@ class Layout {
     // Compact feature-track identifiers sit above map data but below captions
     // and legends, so those established foreground elements retain priority.
     this._trackLabelRenderer.draw();
+    // Keep ruler ticks, labels, and their protective halo above feature and
+    // plot slots. This is also intentionally after slot drawing in exports,
+    // where all canvas layers share a single SVG context.
+    const rulerOffsetAdjustment = viewer.dividers.track.adjustedThickness;
+    viewer.ruler.draw(
+      this.centerInsideOffset - rulerOffsetAdjustment,
+      this.centerOutsideOffset + rulerOffsetAdjustment,
+      'foreground'
+    );
     // Draw center line for current bp
     viewer.centerLine.draw();
     // Captions positioned on the Map

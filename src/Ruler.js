@@ -44,8 +44,8 @@ import * as d3 from 'd3';
  * [color](#color)                  | String    | A string describing the color [Default: 'black']. See {@link Color} for details.
  * [labelPosition](#labelPosition)  | String    | Ruler sides that receive labels: 'inner', 'outer', 'both', or 'none' [Default: 'inner']
  * [labelStyle](#labelStyle)        | String    | Label orientation: 'default', 'tangential', or 'curved' [Default: 'default']
- * [labelHaloColor](#labelHaloColor) | String   | Optional curved-label halo color. When omitted, the current map background color is used.
- * [labelHaloWidth](#labelHaloWidth) | Number   | Total width of the automatic curved-label halo stroke in pixels [Default: 3]
+ * [labelHaloColor](#labelHaloColor) | String   | Optional enhanced-label halo color. When omitted, the current map background color is used.
+ * [labelHaloWidth](#labelHaloWidth) | Number   | Total width of the automatic enhanced-label halo stroke in pixels [Default: 5]
  * [visible](CGObject.html#visible) | Boolean   | Rulers are visible [Default: true]
  * [meta](CGObject.html#meta)       | Object    | [Meta data](../tutorials/details-meta-data.html) for ruler
  *
@@ -81,7 +81,7 @@ class Ruler extends CGObject {
     this.labelPosition = utils.defaultFor(options.labelPosition, 'inner');
     this.labelStyle = utils.defaultFor(options.labelStyle, 'default');
     this.labelHaloColor = options.labelHaloColor;
-    this.labelHaloWidth = utils.defaultFor(options.labelHaloWidth, 3);
+    this.labelHaloWidth = utils.defaultFor(options.labelHaloWidth, 5);
     this.lineCap = 'round';
 
     this.viewer.trigger('ruler-update', { attributes: this.toJSON({includeDefaults: true}) });
@@ -217,7 +217,7 @@ class Ruler extends CGObject {
 
   set labelHaloWidth(value) {
     const width = Number(value);
-    this._labelHaloWidth = Number.isFinite(width) ? Math.max(0, width) : 3;
+    this._labelHaloWidth = Number.isFinite(width) ? Math.max(0, width) : 5;
   }
 
   /**
@@ -379,7 +379,7 @@ class Ruler extends CGObject {
     this._tickFormater = this._createTickFormatter(majorTickStep);
   }
 
-  draw(innerCenterOffset, outerCenterOffset) {
+  draw(innerCenterOffset, outerCenterOffset, layer = 'map') {
     // console.log(innerCenterOffset, outerCenterOffset);
     if (this.visible) {
       innerCenterOffset -= this.spacing;
@@ -387,14 +387,14 @@ class Ruler extends CGObject {
       this._updateTicks(innerCenterOffset, outerCenterOffset);
       const innerLabels = this.labelPosition === 'inner' || this.labelPosition === 'both';
       const outerLabels = this.labelPosition === 'outer' || this.labelPosition === 'both';
-      this.drawForCenterOffset(innerCenterOffset, 'inner', innerLabels);
-      this.drawForCenterOffset(outerCenterOffset, 'outer', outerLabels);
+      this.drawForCenterOffset(innerCenterOffset, 'inner', innerLabels, layer);
+      this.drawForCenterOffset(outerCenterOffset, 'outer', outerLabels, layer);
     }
   }
 
 
-  drawForCenterOffset(centerOffset, position = 'inner', drawLabels = true) {
-    const ctx = this.canvas.context('map');
+  drawForCenterOffset(centerOffset, position = 'inner', drawLabels = true, layer = 'map') {
+    const ctx = this.canvas.context(layer);
     const tickLength = (position === 'inner') ? -this.tickLength : this.tickLength;
     // ctx.fillStyle = 'black'; // Label Color
     ctx.fillStyle = this.color.rgbaString; // Label Color
@@ -403,32 +403,32 @@ class Ruler extends CGObject {
     // ctx.textBaseline = 'top';
     ctx.textBaseline = 'alphabetic'; // The default baseline works best across canvas and svg
     // Draw Tick for first bp (Origin)
-    this.canvas.radiantLine('map', 1, centerOffset, tickLength, this.tickWidth * 2, this.color.rgbaString, this.lineCap);
+    this.canvas.radiantLine(layer, 1, centerOffset, tickLength, this.tickWidth * 2, this.color.rgbaString, this.lineCap);
     // Draw Major ticks
     this.majorTicks.forEach( (bp) => {
-      this.canvas.radiantLine('map', bp, centerOffset, tickLength, this.tickWidth, this.color.rgbaString, this.lineCap);
+      this.canvas.radiantLine(layer, bp, centerOffset, tickLength, this.tickWidth, this.color.rgbaString, this.lineCap);
       if (drawLabels) {
         const label = this.tickFormater(bp);
-        this.drawLabel(bp, label, centerOffset, position);
+        this.drawLabel(bp, label, centerOffset, position, layer);
       }
     });
     // Draw Minor ticks
     for (const bp of this.minorTicks) {
       if (bp > this.sequence.length) { break; }
-      this.canvas.radiantLine('map', bp, centerOffset, tickLength / 2, this.tickWidth, this.color.rgbaString, this.lineCap);
+      this.canvas.radiantLine(layer, bp, centerOffset, tickLength / 2, this.tickWidth, this.color.rgbaString, this.lineCap);
     }
   }
 
-  drawLabel(bp, label, centerOffset, position = 'inner') {
-    const ctx = this.canvas.context('map');
+  drawLabel(bp, label, centerOffset, position = 'inner', layer = 'map') {
+    const ctx = this.canvas.context(layer);
     // Put space between number and units
     label = label.replace(/([kM])?$/, ' $1bp');
     if (this.labelStyle === 'curved' && this.viewer.format === 'circular') {
-      this.drawCurvedLabel(bp, label, centerOffset, position);
+      this.drawCurvedLabel(bp, label, centerOffset, position, layer);
       return;
     }
     if (this.labelStyle === 'tangential' && this.viewer.format === 'circular') {
-      this.drawTangentialLabel(bp, label, centerOffset, position);
+      this.drawTangentialLabel(bp, label, centerOffset, position, layer);
       return;
     }
 
@@ -446,7 +446,7 @@ class Ruler extends CGObject {
    * @private
    */
   _drawLabelText(ctx, label, x, y) {
-    if (this.labelStyle === 'curved' && this.labelHaloWidth > 0) {
+    if (this.labelStyle !== 'default' && this.labelHaloWidth > 0) {
       ctx.save();
       ctx.strokeStyle = this.labelHaloColor.rgbaString;
       ctx.lineWidth = this.labelHaloWidth;
@@ -459,8 +459,8 @@ class Ruler extends CGObject {
     ctx.fillText(label, x, y);
   }
 
-  drawTangentialLabel(bp, label, centerOffset, position) {
-    const ctx = this.canvas.context('map');
+  drawTangentialLabel(bp, label, centerOffset, position, layer = 'map') {
+    const ctx = this.canvas.context(layer);
     const direction = position === 'inner' ? -1 : 1;
     const point = this.canvas.pointForBp(bp, centerOffset + direction * (this.rulerPadding + (this.font.height / 2)));
     const {angle} = this.canvas.tangentialTextOrientationForBp(bp);
@@ -504,13 +504,14 @@ class Ruler extends CGObject {
    * remains naturally readable.
    * @private
    */
-  drawCurvedLabel(bp, label, centerOffset, position) {
-    const ctx = this.canvas.context('map');
+  drawCurvedLabel(bp, label, centerOffset, position, layer = 'map') {
+    const ctx = this.canvas.context(layer);
     const radialDirection = position === 'inner' ? -1 : 1;
     const labelCenterOffset = centerOffset +
       radialDirection * (this.rulerPadding + (this.font.height / 2));
     const measurement = this._curvedLabelMeasurement(ctx, label);
     this.canvas.drawTextAlongArc({
+      layer,
       bp,
       centerOffset: labelCenterOffset,
       characters: measurement.characters,

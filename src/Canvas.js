@@ -700,7 +700,7 @@ class Canvas {
    * the shared circular geometry used by ruler and inline feature labels.
    * @param {Object} options - Curved-text drawing options.
    * @param {String} [options.haloColor] - Optional protective text-stroke color.
-   * @param {Number} [options.haloWidth=3] - Total protective stroke width.
+   * @param {Number} [options.haloWidth=5] - Total protective stroke width.
    * @return {Boolean} Whether the text was drawn.
    * @private
    */
@@ -716,7 +716,7 @@ class Canvas {
       font,
       color,
       haloColor,
-      haloWidth = 3,
+      haloWidth = 5,
     } = options;
     const pixelsPerBp = this.pixelsPerBp(centerOffset);
     if (!Number.isFinite(pixelsPerBp) || pixelsPerBp <= 0 || characters.length === 0) {

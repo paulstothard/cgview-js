@@ -37,7 +37,7 @@ describe('Zoom detail options', () => {
     const cgv = new Viewer('#map');
     expect(cgv.ruler.labelPosition).toBe('inner');
     expect(cgv.ruler.labelStyle).toBe('default');
-    expect(cgv.ruler.labelHaloWidth).toBe(3);
+    expect(cgv.ruler.labelHaloWidth).toBe(5);
     expect(cgv.ruler.toJSON().labelHaloColor).toBeUndefined();
     expect(cgv.ruler.toJSON().showLabelHalo).toBeUndefined();
 
@@ -78,6 +78,36 @@ describe('Zoom detail options', () => {
     });
     expect(cgv.ruler.labelStyle).toBe('tangential');
     expect(cgv.ruler.toJSON().labelStyle).toBe('tangential');
+  });
+
+  test('protects tangential ruler labels with the enhanced-label halo', () => {
+    const cgv = new Viewer('#map', {
+      ruler: {labelPosition: 'outer', labelStyle: 'tangential'},
+    });
+    const ctx = cgv.canvas.context('map');
+    ctx.fillText.mockClear();
+    ctx.strokeText.mockClear();
+
+    cgv.ruler.drawLabel(250, '250', 150, 'outer');
+
+    expect(ctx.strokeText).toHaveBeenCalledWith('250 bp', 0, expect.any(Number));
+    expect(ctx.strokeText.mock.invocationCallOrder[0]).toBeLessThan(ctx.fillText.mock.invocationCallOrder[0]);
+  });
+
+  test('draws the ruler on the foreground after slots and sequence data', () => {
+    const cgv = new Viewer('#map', {
+      sequence: {length: 1000},
+      ruler: {labelPosition: 'outer', labelStyle: 'curved'},
+    });
+    const drawSlots = jest.spyOn(cgv.layout, 'drawAllSlots').mockImplementation(() => {});
+    const drawSequence = jest.spyOn(cgv.sequence, 'draw').mockImplementation(() => {});
+    const drawRuler = jest.spyOn(cgv.ruler, 'draw').mockImplementation(() => {});
+
+    cgv.layout.drawExport();
+
+    expect(drawSlots.mock.invocationCallOrder[0]).toBeLessThan(drawRuler.mock.invocationCallOrder[0]);
+    expect(drawSequence.mock.invocationCallOrder[0]).toBeLessThan(drawRuler.mock.invocationCallOrder[0]);
+    expect(drawRuler).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), 'foreground');
   });
 
   test('curves both circular ruler halo and fill one glyph at a time', () => {
