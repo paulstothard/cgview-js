@@ -308,6 +308,34 @@ describe('Feature', () => {
       expect(Math.abs(reverseTail[1] - 100)).toBeLessThan(10);
     });
 
+    test('matches chevron arm slope to the feature arrowhead', () => {
+      const canvas = viewer.canvas;
+      const context = canvas.context('map');
+      viewer.settings.arrowHeadLength = 0.5;
+      jest.spyOn(canvas, 'pixelsPerBp').mockReturnValue(10);
+      jest.spyOn(canvas, 'pointForBp').mockImplementation((bp, centerOffset) => ({
+        x: bp * 10,
+        y: centerOffset,
+      }));
+
+      context.moveTo.mockClear();
+      context.lineTo.mockClear();
+      canvas.drawFeatureDirectionIndicators({
+        start: 10,
+        stop: 40,
+        centerOffset: 100,
+        color: 'rgba(32,116,174,0.86)',
+        width: 40,
+        direction: 1,
+      });
+
+      const tail = context.moveTo.mock.calls[0];
+      const tip = context.lineTo.mock.calls[0];
+      const tangentRun = tip[0] - tail[0];
+      const radialRun = tail[1] - tip[1];
+      expect(tangentRun / radialRun).toBeCloseTo(2 * viewer.settings.arrowHeadLength);
+    });
+
     test('places chevrons symmetrically outward from the rendered label edges', () => {
       const centers = viewer.canvas._featureDirectionIndicatorCenters({
         minimumCenter: 10,

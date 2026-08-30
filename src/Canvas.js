@@ -585,8 +585,13 @@ class Canvas {
       return;
     }
 
-    const markerLengthPixels = Math.min(18, Math.max(12, width * 0.55));
-    const markerHalfHeight = Math.min(8, Math.max(5, width * 0.22));
+    // Keep the chevron arms parallel to the feature's terminal arrowhead.
+    // The arrowhead advances `arrowHeadLength * width` while crossing half
+    // the feature width, so a smaller, centered indicator uses the same
+    // tangent/radial ratio. A short minimum keeps thin-track marks legible.
+    const markerHalfHeight = Math.min(10, Math.max(5, width * 0.26));
+    const arrowHeadLength = Math.max(0.3, this.viewer.settings.arrowHeadLength);
+    const markerLengthPixels = Math.min(14, Math.max(6, 2 * markerHalfHeight * arrowHeadLength));
     const spacingPixels = Math.max(42, Math.min(64, width * 1.35));
     const edgePaddingPixels = Math.max(markerLengthPixels, width * this.viewer.settings.arrowHeadLength);
     const markerHalfLengthBp = markerLengthPixels / (2 * pixelsPerBp);
