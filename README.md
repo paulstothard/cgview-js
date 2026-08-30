@@ -1,5 +1,13 @@
 # [CGView.js](http://js.cgview.ca)
 
+> [!IMPORTANT]
+> This is Paul Stothard's public development fork of
+> [CGView.js](https://github.com/sciguy/cgview-js). The `enhanced` branch adds
+> zoomed sequence translation, improved feature labeling and direction cues,
+> configurable track sizing, refined plot rendering, and rendering fixes for
+> large maps, Safari, and SVG export. See [FORK_NOTES.md](FORK_NOTES.md) for a
+> detailed summary and an explanation of the branch structure.
+
 [![Pages Status](https://github.com/sciguy/cgview-js/actions/workflows/pages.yml/badge.svg)](https://github.com/sciguy/cgview-js/actions/workflows/pages.yml)
 [![Tests Status](https://github.com/sciguy/cgview-js/actions/workflows/tests.yml/badge.svg)](https://github.com/sciguy/cgview-js/actions/workflows/tests.yml)
 [![Last Commit](https://img.shields.io/github/last-commit/sciguy/CGView-js.svg)](https://github.com/sciguy/cgview-js/commits/main/)
@@ -63,7 +71,6 @@ See the [tutorials](http://js.cgview.ca/tutorials/index.html) to learn how to ad
 ## License
 
 CGView.js is distributed under the [Apache Version 2.0 License](https://github.com/sciguy/cgview-js/blob/main/LICENSE).
-
 
 
 
