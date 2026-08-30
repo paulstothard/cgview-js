@@ -65,8 +65,24 @@ onClick('btn-toggle-labels', () => {
   cgv.draw();
 });
 
+// Toggle the radial/vertical guide to the current base pair
+const centerLineButton = document.getElementById('btn-toggle-center-line');
+const updateCenterLineButton = function() {
+  if (!centerLineButton) return;
+  const action = cgv.centerLine.visible ? 'Hide' : 'Show';
+  centerLineButton.setAttribute('aria-pressed', cgv.centerLine.visible);
+  centerLineButton.setAttribute('aria-label', `${action} Center Line`);
+  centerLineButton.title = `${action} Center Line`;
+};
+
+onClick('btn-toggle-center-line', () => {
+  cgv.centerLine.update({visible: !cgv.centerLine.visible});
+  updateCenterLineButton();
+  cgv.draw();
+});
+updateCenterLineButton();
+
 // Toggle Random Animation
 onClick('btn-animate', () => {
   cgv.isAnimating ? cgv.stopAnimate() : cgv.animate();
 });
-

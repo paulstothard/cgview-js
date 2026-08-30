@@ -45,7 +45,7 @@ import utils from './Utils';
  * [color](#color)                  | String    | A string describing the color [Default: 'black']. See {@link Color} for details.
  * [thickness](#thickness)          | Number    | Thickness of center line [Default: 1]
  * [dashes](#dashes)                | Array     | An array of numbers describing the dash pattern [Default: [1, 2]]
- * [visible](CGObject.html#visible) | Boolean   | Center line is visible [Default: true]
+ * [visible](CGObject.html#visible) | Boolean   | Center line is visible [Default: false]
  * [meta](CGObject.html#meta)       | Object    | [Meta data](../tutorials/details-meta-data.html) for center line
  *
  * ### Examples
@@ -71,7 +71,10 @@ class CenterLine extends CGObject {
    * @param {Object} [meta] - User-defined [Meta data](../tutorials/details-meta-data.html) to add to the center line
    */
   constructor(viewer, options = {}, meta = {}) {
-    super(viewer, options, meta);
+    super(viewer, {
+      ...options,
+      visible: utils.defaultFor(options.visible, false)
+    }, meta);
     this.color = utils.defaultFor(options.color, 'grey');
     this._thickness = utils.defaultFor(options.thickness, 1);
     this._dashes = utils.defaultFor(options.dashes, [1,2]);
@@ -183,5 +186,4 @@ class CenterLine extends CGObject {
 }
 
 export default CenterLine;
-
 

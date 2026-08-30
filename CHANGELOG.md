@@ -19,6 +19,7 @@
 - Avoided translation redraws and layout recalculation below the sequence-detail threshold.
 - Kept start/stop translation highlights inset and proportionally bordered while zooming.
 - Fixed transient hover highlights and popovers remaining visible after the pointer leaves the Viewer.
+- Hid the center line by default and added a test-page toolbar toggle for it.
 
 
 ## 1.8.2 - 2026-05-04 - Paper Release
