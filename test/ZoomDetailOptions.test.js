@@ -379,6 +379,10 @@ describe('Zoom detail options', () => {
     cgv.draw();
 
     expect(cgv.zoomFactor).toBeCloseTo(1);
+    expect(cgv.sequence.translation.visible).toBe(true);
+    expect(cgv.ruler.labelPosition).toBe('outer');
+    expect(cgv.ruler.labelStyle).toBe('curved');
+    expect(cgv.annotation.labelPosition).toBe('both');
     expect(curvedLabel.mock.calls.some(call => call[1].name === 'DNA polymerase')).toBe(true);
   });
 

@@ -21,6 +21,9 @@
 - Fixed transient hover highlights and popovers remaining visible after the pointer leaves the Viewer.
 - Hid the center line by default and added a test-page toolbar toggle for it.
 - Aligned zoomed circular DNA bases to a shared upright tangential text orientation.
+- Kept backbone edge shading visually thin when sequence and translation detail expand the backbone.
+- Added on-demand amino-acid popovers with codon, position, frame, start/stop, and genetic-code details.
+- Defaulted missing zoom-detail settings on the test page to six-frame translation, curved ruler labels, and inline labels with external fallback.
 
 
 ## 1.8.2 - 2026-05-04 - Paper Release

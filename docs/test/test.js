@@ -36,6 +36,30 @@ const showSVGTest = false; // fullSize must be turned off for this to be true
 const labelPlacement = 'default';
 // const labelPlacement = 'angled';
 
+// Defaults used only by this development page when a built-in map does not
+// provide the newer zoom-detail settings. Explicit CGView JSON values win.
+function applyZoomDetailDemoDefaults(json) {
+  const data = json.cgview;
+  data.sequence = data.sequence || {};
+  data.sequence.translation = data.sequence.translation || {};
+  data.ruler = data.ruler || {};
+  data.annotation = data.annotation || {};
+
+  if (data.sequence.translation.visible === undefined) {
+    data.sequence.translation.visible = true;
+  }
+  if (data.ruler.labelPosition === undefined) {
+    data.ruler.labelPosition = 'outer';
+  }
+  if (data.ruler.labelStyle === undefined) {
+    data.ruler.labelStyle = 'curved';
+  }
+  if (data.annotation.labelPosition === undefined) {
+    data.annotation.labelPosition = 'both';
+  }
+  return json;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Initialize
@@ -198,7 +222,7 @@ function loadMapFromID(id) {
   var request = new XMLHttpRequest();
   request.open('GET', url, true);
   request.onload = function() {
-    const json = JSON.parse(request.responseText);
+    const json = applyZoomDetailDemoDefaults(JSON.parse(request.responseText));
     cgv.io.loadJSON(json);
     cgv.name = maps[id].name;
 
