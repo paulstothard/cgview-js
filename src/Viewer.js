@@ -1240,6 +1240,41 @@ class Viewer {
     this.layout.drawFull();
   }
 
+  /**
+   * Cancel a pending Safari post-zoom redraw. This prevents a redraw from an
+   * earlier gesture landing in the middle of a new gesture.
+   * @private
+   */
+  _cancelSafariZoomRedraw() {
+    if (this._safariZoomRedrawFrame === undefined) { return; }
+    if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+      window.cancelAnimationFrame(this._safariZoomRedrawFrame);
+    }
+    this._safariZoomRedrawFrame = undefined;
+  }
+
+  /**
+   * Safari can retain the low-resolution canvas surface used during an
+   * animated zoom. A second full draw after two compositor frames gives
+   * WebKit a settled transform and forces a sharp backing surface without
+   * changing canvas dimensions or penalizing other browsers.
+   * @private
+   */
+  _scheduleSafariZoomRedraw() {
+    if (!utils.isSafari() ||
+        typeof window === 'undefined' ||
+        typeof window.requestAnimationFrame !== 'function') {
+      return;
+    }
+    this._cancelSafariZoomRedraw();
+    this._safariZoomRedrawFrame = window.requestAnimationFrame(() => {
+      this._safariZoomRedrawFrame = window.requestAnimationFrame(() => {
+        this._safariZoomRedrawFrame = undefined;
+        this.drawFull();
+      });
+    });
+  }
+
   drawFast() {
     this.layout.drawFast();
   }
@@ -1568,6 +1603,7 @@ class Viewer {
     zoomFactor = utils.constrain(zoomFactor, zoomExtent[0], zoomExtent[1]);
 
     const { startProps, endProps } = this._moveProps(bp, zoomFactor, bbOffset);
+    const zoomChanged = Math.abs(endProps.zoomFactor - startProps.zoomFactor) > 0.000001;
 
     const isCircular = this.settings.format === 'circular';
 
@@ -1597,10 +1633,18 @@ class Viewer {
           self.drawFast();
         };
       }).on('start', function() {
+        self._cancelSafariZoomRedraw();
         self.trigger('zoom-start');
       }).on('end', function() {
         self.trigger('zoom-end');
-        callback ? callback.call() : self.drawFull();
+        if (callback) {
+          callback.call();
+        } else {
+          self.drawFull();
+          if (zoomChanged) {
+            self._scheduleSafariZoomRedraw();
+          }
+        }
       });
   }
 
