@@ -725,7 +725,6 @@ class Canvas {
 
     const {flipped} = this.tangentialTextOrientationForBp(bp);
     const textDirection = flipped ? -1 : 1;
-    let cursor = -totalWidth / 2;
     const ctx = this.context(layer);
 
     ctx.save();
@@ -740,24 +739,32 @@ class Canvas {
     }
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    for (let index = 0; index < characters.length; index += 1) {
-      const width = widths[index] * widthScale;
-      const pixelOffset = cursor + (width / 2);
-      const glyphBp = bp + (textDirection * pixelOffset / pixelsPerBp);
-      const point = this.pointForBp(glyphBp, centerOffset);
-      // Keep the center glyph's flip direction for the complete label so text
-      // crossing a vertical tangent cannot reverse partway through a word.
-      const angle = this.viewer.scale.bp(glyphBp) + (Math.PI / 2) + (flipped ? Math.PI : 0);
-      ctx.save();
-      ctx.translate(point.x, point.y);
-      ctx.rotate(angle);
-      if (haloColor && haloWidth > 0) {
-        ctx.strokeText(characters[index], 0, 0);
+    const drawGlyphPass = (method) => {
+      let cursor = -totalWidth / 2;
+      for (let index = 0; index < characters.length; index += 1) {
+        const width = widths[index] * widthScale;
+        const pixelOffset = cursor + (width / 2);
+        const glyphBp = bp + (textDirection * pixelOffset / pixelsPerBp);
+        const point = this.pointForBp(glyphBp, centerOffset);
+        // Keep the center glyph's flip direction for the complete label so text
+        // crossing a vertical tangent cannot reverse partway through a word.
+        const angle = this.viewer.scale.bp(glyphBp) + (Math.PI / 2) + (flipped ? Math.PI : 0);
+        ctx.save();
+        ctx.translate(point.x, point.y);
+        ctx.rotate(angle);
+        ctx[method](characters[index], 0, 0);
+        ctx.restore();
+        cursor += width;
       }
-      ctx.fillText(characters[index], 0, 0);
-      ctx.restore();
-      cursor += width;
+    };
+
+    // Complete the protective stroke pass before drawing any glyph fills.
+    // Interleaving stroke/fill per glyph lets the following glyph's halo wash
+    // over the preceding glyph, which visibly changes the label itself.
+    if (haloColor && haloWidth > 0) {
+      drawGlyphPass('strokeText');
     }
+    drawGlyphPass('fillText');
     ctx.restore();
     return true;
   }

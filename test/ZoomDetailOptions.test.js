@@ -102,7 +102,7 @@ describe('Zoom detail options', () => {
     expect(ctx.measureText).not.toHaveBeenCalled();
   });
 
-  test('draws the curved ruler halo behind every glyph when enabled', () => {
+  test('draws the complete curved ruler halo behind every glyph fill', () => {
     const cgv = new Viewer('#map', {
       width: 800,
       height: 600,
@@ -124,10 +124,8 @@ describe('Zoom detail options', () => {
 
     expect(ctx.strokeText.mock.calls.map(call => call[0])).toEqual(Array.from('250 bp'));
     expect(ctx.fillText.mock.calls.map(call => call[0])).toEqual(Array.from('250 bp'));
-    for (let index = 0; index < ctx.fillText.mock.calls.length; index += 1) {
-      expect(ctx.strokeText.mock.invocationCallOrder[index])
-        .toBeLessThan(ctx.fillText.mock.invocationCallOrder[index]);
-    }
+    expect(Math.max(...ctx.strokeText.mock.invocationCallOrder))
+      .toBeLessThan(Math.min(...ctx.fillText.mock.invocationCallOrder));
   });
 
   test('keeps curved-style ruler labels straight in linear maps', () => {
