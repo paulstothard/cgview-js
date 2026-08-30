@@ -21,11 +21,14 @@
 
 import CGObject from './CGObject';
 import CGArray from './CGArray';
+import PlotRenderer from './PlotRenderer';
 import utils from './Utils';
 import * as d3 from 'd3';
 
 /**
- * Plots are drawn as a series of arcs.
+ * Line plots are drawn as screen-aware filled contours. Dense samples are
+ * aggregated into stable genomic bins before rendering; bar plots retain
+ * stepped geometry.
  *
  * ### Action and Events
  *
@@ -42,6 +45,7 @@ import * as d3 from 'd3';
  * Attribute                         | Type     | Description
  * ----------------------------------|----------|------------
  * [name](#name)                     | String   | Name of plot
+ * [type](#type)                     | String   | Plot geometry: `line` or `bar` [Default: `line`]
  * [legend](#legend)                 | String\|LegendItem | Name of legendItem or the legendItem itself (sets positive and negative legend)
  * [legendNegative](#legendNegative) | String\|LegendItem | Name of legendItem or the legendItem itself for the plot above the baseline
  * [legendPositive](#legendPositive) | String\|LegendItem | Name of legendItem or the legendItem itself for the plot below the baseline
@@ -82,6 +86,7 @@ class Plot extends CGObject {
     this.axisMin = utils.defaultFor(data.axisMin, d3.min([0, this.scoreMin]));
     this.axisMax = utils.defaultFor(data.axisMax, d3.max([0, this.scoreMax]));
     this.baseline = utils.defaultFor(data.baseline, 0);
+    this._renderer = new PlotRenderer(this);
 
     if (data.legend) {
       this.legendItem  = data.legend;
@@ -407,18 +412,28 @@ class Plot extends CGObject {
 
   draw(canvas, slotRadius, slotThickness, fast, range) {
     // let startTime = new Date().getTime();
-    if (!this.visible) { return; }
-    if (this.colorNegative.rgbaString === this.colorPositive.rgbaString) {
-      this._drawPath(canvas, slotRadius, slotThickness, fast, range, this.colorPositive);
-    } else {
-      this._drawPath(canvas, slotRadius, slotThickness, fast, range, this.colorPositive, 'positive');
-      this._drawPath(canvas, slotRadius, slotThickness, fast, range, this.colorNegative, 'negative');
+    if (!this.visible || !range || this.positions.length === 0 || this.scores.length === 0) { return; }
+    if (this.type === 'bar') {
+      this._drawPaths(this._drawBarPath, [canvas, slotRadius, slotThickness, fast, range]);
+      return;
     }
+
+    this._renderer.draw(canvas, slotRadius, slotThickness, range);
     // console.log("Plot Time: '" + utils.elapsedTime(startTime) );
   }
 
-  // To add a fast mode use a step when creating the indices
-  _drawPath(canvas, slotRadius, slotThickness, fast, range, color, orientation) {
+  _drawPaths(drawMethod, drawArguments) {
+    if (this.colorNegative.rgbaString === this.colorPositive.rgbaString) {
+      drawMethod.call(this, ...drawArguments, this.colorPositive);
+    } else {
+      drawMethod.call(this, ...drawArguments, this.colorPositive, 'positive');
+      drawMethod.call(this, ...drawArguments, this.colorNegative, 'negative');
+    }
+  }
+
+  // Bar plots retain the established step geometry. Line plots are handled
+  // by the dedicated screen-aware renderer.
+  _drawBarPath(canvas, slotRadius, slotThickness, fast, range, color, orientation) {
     const ctx = canvas.context('map');
     const positions = this.positions;
     const scores = this.scores;
