@@ -984,6 +984,18 @@ function setSVGPreviewStatus(message, state = '') {
 
 function queueSVGPreview() {
   if (!svgModeCheckbox.checked) { return; }
+  if (cgv.layout.fullDrawInProgress) {
+    svgAutoRefreshPending = true;
+    setSVGPreviewStatus('Finishing the canvas draw before creating the SVG preview…', 'working');
+    createSVGBtn.disabled = true;
+    clearTimeout(svgAutoRefreshTimer);
+    svgAutoRefreshTimer = setTimeout(() => {
+      svgAutoRefreshTimer = undefined;
+      queueSVGPreview();
+    }, 100);
+    return;
+  }
+  svgAutoRefreshPending = false;
   if (svgPreviewFrame) {
     cancelAnimationFrame(svgPreviewFrame);
   }

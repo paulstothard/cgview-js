@@ -900,9 +900,18 @@ class Layout {
     this._adjustProportions({duration: 0});
   }
 
+  /**
+   * Whether a full-quality canvas draw is still replacing its fast slot
+   * preview. Export and demo tooling can use this to avoid competing with the
+   * progressive renderer on large maps.
+   */
+  get fullDrawInProgress() {
+    return this._slotTimeoutID !== undefined;
+  }
+
   // Draw everything but the slots and their features.
   // e.g. draws backbone, dividers, ruler, labels, progress
-  drawMapWithoutSlots(fast) {
+  drawMapWithoutSlots(fast, options = {}) {
     const viewer = this.viewer;
     const backbone = viewer.backbone;
     const canvas = this.canvas;
@@ -949,11 +958,16 @@ class Layout {
     //   ctx.stroke();
     // }
 
-    // Slots timout
-    this._slotIndex = 0;
-    if (this._slotTimeoutID) {
-      clearTimeout(this._slotTimeoutID);
-      this._slotTimeoutID = undefined;
+    // Interactive full draws progressively replace their fast slot preview.
+    // Synchronous exports use temporary canvas layers and must not cancel that
+    // live redraw: once the export returns, its pending callback will continue
+    // safely on the restored interactive layers.
+    if (!options.preserveSlotProgress) {
+      this._slotIndex = 0;
+      if (this._slotTimeoutID) {
+        clearTimeout(this._slotTimeoutID);
+        this._slotTimeoutID = undefined;
+      }
     }
   }
 
@@ -980,7 +994,7 @@ class Layout {
   }
 
   drawExport() {
-    this.drawMapWithoutSlots();
+    this.drawMapWithoutSlots(undefined, {preserveSlotProgress: true});
     this.drawAllSlots(false);
     this.sequence.draw();
     this.drawForeground(false);
@@ -1064,6 +1078,7 @@ class Layout {
     if (layout._slotIndex < slots.length) {
       layout._slotTimeoutID = setTimeout(layout.drawSlotWithTimeOut, 0, layout);
     } else {
+      layout._slotTimeoutID = undefined;
       if (layout.viewer.debug) {
         layout.viewer.debug.data.time.fullDraw = utils.elapsedTime(layout._drawFullStartTime);
         layout.viewer.debug.draw();

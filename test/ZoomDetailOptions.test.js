@@ -120,6 +120,25 @@ describe('Zoom detail options', () => {
     expect(drawRuler).toHaveBeenCalledWith(expect.any(Number), expect.any(Number), 'foreground');
   });
 
+  test('does not interrupt a progressive canvas draw while rendering an export', () => {
+    const cgv = new Viewer('#map', {sequence: {length: 1000}});
+    const pendingSlotDraw = setTimeout(() => {}, 1000);
+    cgv.layout._slotIndex = 1;
+    cgv.layout._slotTimeoutID = pendingSlotDraw;
+
+    try {
+      expect(cgv.layout.fullDrawInProgress).toBe(true);
+      cgv.layout.drawExport();
+
+      expect(cgv.layout._slotIndex).toBe(1);
+      expect(cgv.layout._slotTimeoutID).toBe(pendingSlotDraw);
+      expect(cgv.layout.fullDrawInProgress).toBe(true);
+    } finally {
+      clearTimeout(pendingSlotDraw);
+      cgv.layout._slotTimeoutID = undefined;
+    }
+  });
+
   test('curves both circular ruler halo and fill one glyph at a time', () => {
     const cgv = new Viewer('#map', {
       width: 800,
