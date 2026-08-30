@@ -280,9 +280,9 @@ class Annotation extends CGObject {
    * Draw names inside the supplied visible features.
    * @private
    */
-  drawFeatureLabels(features, centerOffset, slotThickness, visibleRange) {
+  drawFeatureLabels(features, centerOffset, slotThickness, visibleRange, slot) {
     if (!this.visible || !['inline', 'both'].includes(this.labelPosition)) { return; }
-    this._featureLabelRenderer.draw(features, centerOffset, slotThickness, visibleRange);
+    this._featureLabelRenderer.draw(features, centerOffset, slotThickness, visibleRange, slot);
   }
 
   /**
@@ -566,6 +566,7 @@ class Annotation extends CGObject {
   }
 
   draw(innerCenterOffset, outerCenterOffset, fast) {
+    this._featureLabelRenderer.beginDraw();
     if (!['external', 'both'].includes(this.labelPosition)) {
       this._visibleLabels = new CGArray();
       return;

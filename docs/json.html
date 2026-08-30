@@ -111,7 +111,12 @@ that fit inside features are drawn inline and the remainder use external
 labels. Enable or disable inline shrinking and ellipsis truncation independently
 with `inlineLabelAllowShrinking` and `inlineLabelAllowTruncation`. When no
 annotation or inline-label color is supplied, the viewer selects black or white
-using the contrast of the feature color composited over the map background.
+using the contrast of the feature color composited over its rendered backing
+color. For features positioned along the backbone, this includes the backbone
+or contig color. At nucleotide-detail zoom, inline labels in that shared space
+yield to the sequence rows. Overlapping inline labels use the same favorite-then-
+length priority as external labels. In `both` mode, labels that cannot be placed
+inline remain eligible for external placement.
 
 ```json
 {

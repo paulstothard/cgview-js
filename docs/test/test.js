@@ -295,6 +295,7 @@ clearBtn.addEventListener('click', (e) => {
 const translationsCheckbox = document.getElementById('zoom-detail-translations');
 const tangentialRulerCheckbox = document.getElementById('zoom-detail-ruler');
 const featureLabelModeSelect = document.getElementById('zoom-detail-label-mode');
+const featureTrackPositionSelect = document.getElementById('zoom-detail-track-position');
 const shrinkInlineLabelsCheckbox = document.getElementById('zoom-detail-label-shrink');
 const truncateInlineLabelsCheckbox = document.getElementById('zoom-detail-label-truncate');
 const highlightStartsCheckbox = document.getElementById('zoom-detail-highlight-starts');
@@ -312,9 +313,12 @@ geneticCodeSelect.innerHTML = geneticCodeOptions.join('\n');
 
 function syncZoomDetailControls() {
   const inlineLabelsEnabled = ['inline', 'both'].includes(cgv.annotation.labelPosition);
+  const featureTrack = cgv.tracks().find(track => track.name === 'Zoom-detail features');
   translationsCheckbox.checked = cgv.sequence.translation.visible;
   tangentialRulerCheckbox.checked = cgv.ruler.labelPosition === 'outer' && cgv.ruler.labelStyle === 'tangential';
   featureLabelModeSelect.value = cgv.annotation.labelPosition;
+  featureTrackPositionSelect.value = featureTrack?.position || 'around';
+  featureTrackPositionSelect.disabled = !featureTrack;
   shrinkInlineLabelsCheckbox.checked = cgv.annotation.inlineLabelAllowShrinking;
   truncateInlineLabelsCheckbox.checked = cgv.annotation.inlineLabelAllowTruncation;
   highlightStartsCheckbox.checked = cgv.sequence.translation.highlightStartCodons;
@@ -355,6 +359,16 @@ tangentialRulerCheckbox.addEventListener('change', (e) => {
 
 featureLabelModeSelect.addEventListener('change', (e) => {
   cgv.annotation.update({labelPosition: e.target.value});
+  cgv.draw();
+});
+
+featureTrackPositionSelect.addEventListener('change', (e) => {
+  const featureTrack = cgv.tracks().find(track => track.name === 'Zoom-detail features');
+  const position = e.target.value;
+  featureTrack?.update({
+    position,
+    separateFeaturesBy: position === 'along' ? 'none' : 'strand',
+  });
   cgv.draw();
 });
 

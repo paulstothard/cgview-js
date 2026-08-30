@@ -446,6 +446,31 @@ class Sequence extends CGObject {
     return Math.min(1, pixelsPerBp / (this.bpSpacing - this.bpMargin));
   }
 
+  /**
+   * Return true when the nucleotide rows are drawn at the supplied scale.
+   * @param {Number} [pixelsPerBp] - Backbone pixels per base pair.
+   * @return {Boolean} Whether nucleotide detail occupies the backbone.
+   * @private
+   */
+  isDetailVisible(pixelsPerBp = this.viewer.backbone.pixelsPerBp()) {
+    const minimumScale = 0.25;
+    return this.visible && pixelsPerBp >= 1 &&
+      pixelsPerBp >= (this.bpSpacing - this.bpMargin) * minimumScale;
+  }
+
+  /**
+   * Return true when nucleotide rows are large enough to reserve their shared
+   * backbone space from other text.
+   * @param {Number} [pixelsPerBp] - Backbone pixels per base pair.
+   * @return {Boolean} Whether nucleotide detail is meaningfully readable.
+   * @private
+   */
+  isDetailReadable(pixelsPerBp = this.viewer.backbone.pixelsPerBp()) {
+    const minimumScale = 0.5;
+    return this.isDetailVisible(pixelsPerBp) &&
+      this.detailScaleFactor(pixelsPerBp) >= minimumScale;
+  }
+
   get isLinear() {
     return false;
   }
@@ -918,13 +943,10 @@ class Sequence extends CGObject {
   }
 
   draw() {
-    if (this.viewer.backbone.pixelsPerBp() < 1) { return; }
-    if (!this.visible) { return; }
+    const pixelsPerBp = this.viewer.backbone.pixelsPerBp();
+    if (!this.isDetailVisible(pixelsPerBp)) { return; }
     const ctx = this.canvas.context('map');
     const backbone = this.viewer.backbone;
-    const pixelsPerBp = backbone.pixelsPerBp();
-    const seqZoomFactor = 0.25; // The scale at which the sequence will first appear.
-    if (pixelsPerBp < (this.bpSpacing - this.bpMargin) * seqZoomFactor) { return; }
 
     const scaleFactor = this.detailScaleFactor(pixelsPerBp);
 

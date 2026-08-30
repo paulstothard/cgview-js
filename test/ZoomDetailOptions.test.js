@@ -92,6 +92,91 @@ describe('Zoom detail options', () => {
     expect(renderer._labelColor(cgv.features(2)).rgbaString).toBe('rgba(255,255,255,1)');
   });
 
+  test('uses the backbone as the color beneath features in a centered along track', () => {
+    const cgv = new Viewer('#map', {
+      settings: {backgroundColor: 'white'},
+      backbone: {color: 'black'},
+      annotation: {labelPosition: 'inline'},
+      legend: {items: [{name: 'Feature', swatchColor: 'rgba(255,255,255,0.2)'}]},
+      features: [{name: 'backbone feature', source: 'test', start: 100, stop: 500, legend: 'Feature'}],
+    });
+    cgv.addTracks([{
+      name: 'Along', dataType: 'feature', dataMethod: 'source', dataKeys: 'test',
+      position: 'along', separateFeaturesBy: 'none',
+    }]);
+    const renderer = cgv.annotation._featureLabelRenderer;
+    const feature = cgv.features(1);
+    const slot = cgv.tracks(1).slots(1);
+
+    expect(slot.bbOffset).toBeCloseTo(0);
+    expect(renderer._labelColor(feature, slot).rgbaString).toBe('rgba(255,255,255,1)');
+    expect(renderer._labelColor(feature).rgbaString).toBe('rgba(0,0,0,1)');
+  });
+
+  test('does not place inline labels over backbone nucleotide detail', () => {
+    const cgv = new Viewer('#map', {
+      sequence: {seq: 'A'.repeat(1000)},
+      annotation: {labelPosition: 'both'},
+      features: [{name: 'backbone feature', source: 'test', start: 100, stop: 500, legend: 'Feature'}],
+    });
+    cgv.addTracks([{
+      name: 'Along', dataType: 'feature', dataMethod: 'source', dataKeys: 'test',
+      position: 'along', separateFeaturesBy: 'none',
+    }]);
+    const renderer = cgv.annotation._featureLabelRenderer;
+    const feature = cgv.features(1);
+    const slot = cgv.tracks(1).slots(1);
+    const visibleRange = new CGRange(cgv.sequence.mapContig, 1, 600);
+    jest.spyOn(cgv.backbone, 'pixelsPerBp').mockReturnValue(10);
+    jest.spyOn(cgv.canvas, 'pixelsPerBp').mockReturnValue(1);
+    jest.spyOn(cgv.canvas, 'visibleRangeForCenterOffset').mockReturnValue(visibleRange);
+
+    expect(cgv.sequence.isDetailVisible()).toBe(true);
+    expect(cgv.sequence.isDetailReadable()).toBe(true);
+    expect(renderer.metricsFor(feature, slot.centerOffset, slot.thickness, visibleRange, slot)).toBeUndefined();
+    expect(renderer.willDrawFeature(feature)).toBe(false);
+
+    const firstVisibleScale = (cgv.sequence.bpSpacing - cgv.sequence.bpMargin) * 0.3;
+    cgv.backbone.pixelsPerBp.mockReturnValue(firstVisibleScale);
+    expect(cgv.sequence.isDetailVisible()).toBe(true);
+    expect(cgv.sequence.isDetailReadable()).toBe(false);
+    expect(renderer.metricsFor(feature, slot.centerOffset, slot.thickness, visibleRange, slot)).toBeDefined();
+
+    cgv.sequence.visible = false;
+    expect(renderer.metricsFor(feature, slot.centerOffset, slot.thickness, visibleRange, slot)).toBeDefined();
+  });
+
+  test('keeps overlapping inline labels collision-free with external fallbacks', () => {
+    const cgv = new Viewer('#map', {
+      width: 800,
+      height: 600,
+      sequence: {length: 1000},
+      annotation: {labelPosition: 'both'},
+      features: [
+        {name: 'long winner', source: 'test', start: 100, stop: 500, legend: 'Feature'},
+        {name: 'short fallback', source: 'test', start: 150, stop: 450, legend: 'Feature'},
+      ],
+    });
+    cgv.addTracks([{
+      name: 'Along', dataType: 'feature', dataMethod: 'source', dataKeys: 'test',
+      position: 'along', separateFeaturesBy: 'none',
+    }]);
+    const renderer = cgv.annotation._featureLabelRenderer;
+    const slot = cgv.tracks(1).slots(1);
+    const visibleRange = new CGRange(cgv.sequence.mapContig, 1, 1000);
+    jest.spyOn(cgv.canvas, 'pixelsPerBp').mockReturnValue(1);
+    jest.spyOn(cgv.canvas, 'visibleRangeForCenterOffset').mockReturnValue(visibleRange);
+    const curvedLabel = jest.spyOn(renderer, '_drawCurvedLabel');
+
+    renderer.beginDraw();
+    expect(renderer.willDrawFeature(cgv.features(1))).toBe(true);
+    expect(renderer.willDrawFeature(cgv.features(2))).toBe(false);
+
+    renderer.draw(slot.features(), slot.centerOffset, slot.thickness, visibleRange, slot);
+    expect(curvedLabel).toHaveBeenCalledTimes(1);
+    expect(curvedLabel.mock.calls[0][1]).toBe(cgv.features(1));
+  });
+
   test('uses explicit inline and general annotation colors before automatic contrast', () => {
     document.body.innerHTML = '<div id="map-inline"></div><div id="map-general"></div>';
     const inlineOverride = new Viewer('#map-inline', {

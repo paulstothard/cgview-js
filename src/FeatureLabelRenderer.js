@@ -37,6 +37,7 @@ class FeatureLabelRenderer {
     this.annotation = annotation;
     this._glyphWidthCache = new WeakMap();
     this._automaticColorCache = new Map();
+    this._slotPlacements = new Map();
   }
 
   get viewer() {
@@ -45,6 +46,15 @@ class FeatureLabelRenderer {
 
   get canvas() {
     return this.annotation.canvas;
+  }
+
+  /**
+   * Start a new map draw. Placement results are deliberately draw-local so
+   * zooming and feature updates cannot leave stale geometry behind.
+   * @private
+   */
+  beginDraw() {
+    this._slotPlacements.clear();
   }
 
   _splitRange(start, stop) {
@@ -99,7 +109,11 @@ class FeatureLabelRenderer {
     return segment.wrapped ? (bp >= segment.start || bp <= segment.stop) : (bp >= segment.start && bp <= segment.stop);
   }
 
-  _labelColor(feature) {
+  _isOnBackbone(slot) {
+    return slot?.position === 'along' && Math.abs(slot.bbOffset) < 0.01;
+  }
+
+  _labelColor(feature, slot) {
     if (this.annotation.inlineLabelColor) {
       return this.annotation.inlineLabelColor;
     }
@@ -110,7 +124,9 @@ class FeatureLabelRenderer {
     // Feature colors can be translucent, so choose text against the color that
     // is actually visible after the feature is composited over the map.
     const featureColor = feature.color;
-    const backgroundColor = this.viewer.settings.backgroundColor;
+    const backgroundColor = this._isOnBackbone(slot) ?
+      this.viewer.backbone.colorForContig(feature.contig) :
+      this.viewer.settings.backgroundColor;
     const cacheKey = `${featureColor.rgbaString}\n${backgroundColor.rgbaString}`;
     let color = this._automaticColorCache.get(cacheKey);
     if (!color) {
@@ -215,11 +231,14 @@ class FeatureLabelRenderer {
     };
   }
 
-  metricsFor(feature, centerOffset, slotThickness, visibleRange) {
+  metricsFor(feature, centerOffset, slotThickness, visibleRange, slot) {
     const annotation = this.annotation;
     if (!feature.name || !feature.visible || !visibleRange) { return; }
     if (this.viewer.zoomFactor < annotation.inlineLabelMinZoomFactor) { return; }
     if (annotation.onlyDrawFavorites && !feature.favorite) { return; }
+    // Nucleotide rows are intentionally drawn over backbone-positioned
+    // features. Do not place another text layer in the same radial space.
+    if (this._isOnBackbone(slot) && this.viewer.sequence.isDetailReadable()) { return; }
 
     const adjustedCenterOffset = feature.adjustedCenterOffset(centerOffset, slotThickness);
     const adjustedWidth = feature.adjustedWidth(slotThickness);
@@ -259,9 +278,10 @@ class FeatureLabelRenderer {
           bp,
           centerOffset: adjustedCenterOffset,
           ...textPlan,
+          textWidth: textPlan.widths.reduce((sum, width) => sum + width, 0) * textPlan.fontSize / font.size,
           availableWidth,
           pixelsPerBp,
-          color: this._labelColor(feature),
+          color: this._labelColor(feature, slot),
         };
       }
     }
@@ -277,10 +297,75 @@ class FeatureLabelRenderer {
   _glyphPlan(ctx, feature, metrics) {
     const font = feature.label.font;
     const scale = metrics.fontSize / font.size;
-    const totalWidth = metrics.widths.reduce((sum, width) => sum + width, 0) * scale;
+    const totalWidth = metrics.textWidth;
     if (totalWidth > (metrics.availableWidth + 0.01)) { return; }
     ctx.font = font.cssScaled(scale);
     return {characters: metrics.characters, widths: metrics.widths, totalWidth, scale};
+  }
+
+  _labelBounds(metrics) {
+    return {
+      bp: metrics.bp,
+      halfBp: metrics.textWidth / (2 * metrics.pixelsPerBp),
+      innerOffset: metrics.centerOffset - (metrics.fontSize / 2),
+      outerOffset: metrics.centerOffset + (metrics.fontSize / 2),
+    };
+  }
+
+  _boundsOverlap(first, second) {
+    const radialOverlap = first.innerOffset <= second.outerOffset &&
+      second.innerOffset <= first.outerOffset;
+    if (!radialOverlap) { return false; }
+
+    let bpDistance = Math.abs(first.bp - second.bp);
+    if (this.viewer.format === 'circular') {
+      bpDistance = Math.min(bpDistance, this.viewer.sequence.length - bpDistance);
+    }
+    return bpDistance <= (first.halfBp + second.halfBp);
+  }
+
+  _nonOverlappingPlacements(features, centerOffset, slotThickness, visibleRange, slot) {
+    const candidates = [];
+    for (const feature of features) {
+      const metrics = this.metricsFor(feature, centerOffset, slotThickness, visibleRange, slot);
+      if (metrics) {
+        candidates.push({feature, metrics, bounds: this._labelBounds(metrics)});
+      }
+    }
+
+    // Match external-label priorities: favorites first, then longer features.
+    // This keeps collision choices deterministic regardless of feature draw order.
+    candidates.sort((first, second) => {
+      if (first.feature.favorite !== second.feature.favorite) {
+        return first.feature.favorite ? -1 : 1;
+      }
+      return (second.feature.length - first.feature.length) ||
+        (first.feature.mapStart - second.feature.mapStart);
+    });
+
+    const placements = new Map();
+    const placedBounds = [];
+    for (const candidate of candidates) {
+      if (placedBounds.some(bounds => this._boundsOverlap(candidate.bounds, bounds))) { continue; }
+      placements.set(candidate.feature, candidate.metrics);
+      placedBounds.push(candidate.bounds);
+    }
+    return placements;
+  }
+
+  _placementsForSlot(slot, visibleRange, features) {
+    let placements = this._slotPlacements.get(slot);
+    if (placements) { return placements; }
+    const visibleFeatures = features || slot._featureNCList.find(visibleRange.start, visibleRange.stop);
+    placements = this._nonOverlappingPlacements(
+      visibleFeatures,
+      slot.centerOffset,
+      slot.thickness,
+      visibleRange,
+      slot
+    );
+    this._slotPlacements.set(slot, placements);
+    return placements;
   }
 
   _drawStraightLabel(ctx, feature, metrics) {
@@ -321,13 +406,16 @@ class FeatureLabelRenderer {
     }
   }
 
-  draw(features, centerOffset, slotThickness, visibleRange) {
+  draw(features, centerOffset, slotThickness, visibleRange, slot) {
     if (!['inline', 'both'].includes(this.annotation.labelPosition)) { return; }
     const ctx = this.canvas.context('map');
+    const placements = slot ?
+      this._placementsForSlot(slot, visibleRange, features) :
+      this._nonOverlappingPlacements(features, centerOffset, slotThickness, visibleRange);
     ctx.save();
     for (const feature of features) {
       if (this.annotation.onlyDrawFavorites && !feature.favorite) { continue; }
-      const metrics = this.metricsFor(feature, centerOffset, slotThickness, visibleRange);
+      const metrics = placements.get(feature);
       if (!metrics) { continue; }
       if (this.viewer.format === 'circular') {
         this._drawCurvedLabel(ctx, feature, metrics);
@@ -349,7 +437,7 @@ class FeatureLabelRenderer {
     for (const slot of feature.slots()) {
       if (!slot.visible || !slot.track.visible || slot.thickness <= 0) { continue; }
       const visibleRange = this.canvas.visibleRangeForCenterOffset(slot.centerOffset, {margin: slot.thickness});
-      if (this.metricsFor(feature, slot.centerOffset, slot.thickness, visibleRange)) {
+      if (visibleRange && this._placementsForSlot(slot, visibleRange).has(feature)) {
         return true;
       }
     }

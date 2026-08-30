@@ -335,7 +335,7 @@ class Slot extends CGObject {
           });
         }
 
-        this.viewer.annotation.drawFeatureLabels(drawnFeatures, slotCenterOffset, slotThickness, range);
+        this.viewer.annotation.drawFeatureLabels(drawnFeatures, slotCenterOffset, slotThickness, range, this);
 
         // Debug
         if (this.viewer.debug && this.viewer.debug.data.n) {
@@ -384,4 +384,3 @@ class Slot extends CGObject {
 }
 
 export default Slot;
-
