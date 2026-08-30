@@ -38,7 +38,7 @@
 
     <!-- Dev Page -->
     <script src='performance.js'></script>
-    <link rel="stylesheet" href="test.css?v=zoom-detail-layout-1" />
+    <link rel="stylesheet" href="test.css?v=svg-testing-layout-1" />
     <!-- Test Map Data -->
     <script src='maps.js?v=feature-track-labels-1'></script>
 
@@ -89,30 +89,40 @@
     </nav>
 
     <main>
-      <div class='map-area'>
-				<div id='my-viewer'></div>
-				<!-- <div id='draw&#45;range'></div> -->
-				<div class='cgv-controls'>
-					<div class='cgv-btn' id='btn-reset' title='Reset Map'></div>
-					<div class='cgv-btn' id='btn-zoom-in' title='Zoom In'></div>
-					<div class='cgv-btn' id='btn-zoom-out' title='Zoom Out'></div>
-					<div class='cgv-btn' id='btn-move-left' title='Move Left/Counterclockwise'></div>
-					<div class='cgv-btn' id='btn-move-right' title='Move Right/Clockwise'></div>
-					<div class='cgv-btn' id='btn-toggle-format' title='Toggle Linear/Circular Format'></div>
-					<div class='cgv-btn' id='btn-invert-colors' title='Invert Map Colors'></div>
-					<div class='cgv-btn' id='btn-random-feature' title='Move to Random Feature'></div>
-					<div class='cgv-btn' id='btn-download' title='Download Map PNG'></div>
-					<div class='cgv-btn' id='btn-toggle-labels' title='Toggle Labels'></div>
-					<button type='button' class='cgv-btn' id='btn-toggle-center-line' title='Show Center Line' aria-label='Show Center Line' aria-pressed='false'></button>
-				</div>
-			</div>
-				<div id='svg-section'>
-					<div id='svg-map'></div>
-          <div class='svg-buttons'>
-						<button id='create-svg' type="button" class="btn btn-sm btn-outline-success">Create SVG</button>
-						<button id='download-svg' type="button" class="btn btn-sm btn-outline-success">Download SVG</button>
+      <div class='viewer-panels'>
+        <div id='svg-testing-toolbar' aria-label='SVG testing controls'>
+          <div class='svg-toolbar-title'>SVG testing</div>
+          <div class='svg-view-toggle' role='group' aria-label='Map renderer'>
+            <button id='svg-view-canvas' type='button' class='btn btn-sm' aria-pressed='true'>Canvas</button>
+            <button id='svg-view-preview' type='button' class='btn btn-sm' aria-pressed='false'>SVG</button>
+          </div>
+          <div id='svg-preview-status' role='status' aria-live='polite'>Enable SVG testing to create a preview.</div>
+          <button id='create-svg' type='button' class='btn btn-sm btn-outline-success'>Refresh</button>
+          <button id='download-svg' type='button' class='btn btn-sm btn-outline-success'>Download SVG</button>
+        </div>
+        <div class='map-stage'>
+          <div class='map-area'>
+						<div id='my-viewer'></div>
+						<!-- <div id='draw&#45;range'></div> -->
+						<div class='cgv-controls'>
+							<div class='cgv-btn' id='btn-reset' title='Reset Map'></div>
+							<div class='cgv-btn' id='btn-zoom-in' title='Zoom In'></div>
+							<div class='cgv-btn' id='btn-zoom-out' title='Zoom Out'></div>
+							<div class='cgv-btn' id='btn-move-left' title='Move Left/Counterclockwise'></div>
+							<div class='cgv-btn' id='btn-move-right' title='Move Right/Clockwise'></div>
+							<div class='cgv-btn' id='btn-toggle-format' title='Toggle Linear/Circular Format'></div>
+							<div class='cgv-btn' id='btn-invert-colors' title='Invert Map Colors'></div>
+							<div class='cgv-btn' id='btn-random-feature' title='Move to Random Feature'></div>
+							<div class='cgv-btn' id='btn-download' title='Download Map PNG'></div>
+							<div class='cgv-btn' id='btn-toggle-labels' title='Toggle Labels'></div>
+							<button type='button' class='cgv-btn' id='btn-toggle-center-line' title='Show Center Line' aria-label='Show Center Line' aria-pressed='false'></button>
+						</div>
+					</div>
+					<div id='svg-section' aria-label='SVG map preview'>
+						<div id='svg-map'></div>
 					</div>
 				</div>
+      </div>
       <div class='test-sidebar'>
         <div class='map-select-section'>
           <div class='test-heading'>Choose Map</div>
@@ -280,7 +290,7 @@
     <!-- Bootstrap JavaScript -->
     <script src="../scripts/bootstrap.min.js"></script>
 
-    <script src='test.js?v=map-loading-1'></script>
+    <script src='test.js?v=svg-testing-ui-5'></script>
     <script src='../scripts/controls.js?v=feature-track-labels-1'></script>
 
   </body>

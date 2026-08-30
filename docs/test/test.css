@@ -7,6 +7,59 @@ main {
   padding-left: 10px;
 }
 
+.viewer-panels {
+  width: calc(100vw - 440px);
+}
+
+#svg-testing-toolbar {
+  align-items: center;
+  background: #f7f9fb;
+  border: 1px solid #d8dee4;
+  border-radius: 6px;
+  display: none;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+  min-height: 42px;
+  padding: 5px 7px;
+}
+
+.svg-toolbar-title {
+  color: #25313c;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.svg-view-toggle {
+  background: #e7ebef;
+  border-radius: 5px;
+  display: flex;
+  padding: 2px;
+}
+
+.svg-view-toggle .btn {
+  border: 0;
+  border-radius: 4px;
+  color: #5b6570;
+  min-width: 62px;
+  padding: 2px 9px;
+}
+
+.svg-view-toggle .btn:focus {
+  box-shadow: 0 0 0 2px rgba(40, 120, 208, 0.2);
+}
+
+.svg-view-toggle .btn.is-active {
+  background: white;
+  box-shadow: 0 1px 3px rgba(25, 35, 45, 0.18);
+  color: #1d2730;
+}
+
+.map-stage {
+  position: relative;
+}
+
 .row {
   display: flex;
   flex-wrap: nowrap;
@@ -32,9 +85,7 @@ main {
 }
 
 .map-area {
-  /* width: 600px; */
-  /* display: inline-block; */
-  float: left;
+  display: block;
 }
 
 #my-viewer {
@@ -331,25 +382,57 @@ hr {
 
 
 #svg-section {
-  float: left;
-  margin-left: 5px;
-  /* Default should be hidden unless doing a lot of testing */
+  display: none;
+  margin: 0;
   visibility: hidden;
-  display: none; /* Set to none initially to prevent unwanted scrolling */
 }
-#svg-section .btn {
-  width: 200px;
+#svg-preview-status {
+  color: #6c757d;
+  flex: 1 1 180px;
+  font-size: 11px;
+  line-height: 1.3;
+  min-height: 14px;
+  text-align: left;
 }
-.svg-buttons {
-  display: flex;
-  justify-content: space-evenly;
+#svg-preview-status[data-state='working']::before {
+  animation: map-load-spin 0.8s linear infinite;
+  border: 2px solid #cbd3da;
+  border-radius: 50%;
+  border-top-color: #198754;
+  content: '';
+  display: inline-block;
+  height: 10px;
+  margin-right: 5px;
+  vertical-align: -1px;
+  width: 10px;
+}
+#svg-preview-status[data-state='stale'] {
+  color: #8a5a00;
+}
+#svg-preview-status[data-state='error'] {
+  color: #b42318;
 }
 #svg-map {
-	width: 600px;
-	height: 600px;
   border: 1px lightgrey solid;
   overflow: hidden;
-	margin-bottom: 5px;
+	margin: 0;
+  width: max-content;
+  max-width: 100%;
+}
+#svg-map svg {
+  display: block;
+}
+
+@media (max-width: 860px) {
+  .viewer-panels {
+    width: 100%;
+  }
+  .test-sidebar {
+    bottom: auto;
+    margin-top: 10px;
+    position: static;
+    width: 600px;
+  }
 }
 
 /* .section-labels .btn {

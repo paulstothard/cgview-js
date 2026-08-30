@@ -30,7 +30,7 @@ const drawRange = false;
 const selection = false;
 const showPerformanceTest = false;
 const showLabelsTest = false;
-const showSVGTest = false; // fullSize must be turned off for this to be true
+const showSVGTest = false;
 
 // Other Options
 const labelPlacement = 'default';
@@ -269,6 +269,7 @@ function loadMapFromID(id) {
     cgv.draw();
     setTimeout( () => {
       cgv.resize();
+      scheduleSVGPreviewRefresh();
     },1);
     const elapsedSeconds = ((performance.now() - startedAt) / 1000).toFixed(1);
     setMapLoadStatus(`Loaded ${map.name} in ${elapsedSeconds} s`, 'success');
@@ -796,11 +797,14 @@ zoomDetailButton.addEventListener('click', () => {
 
 function myResize() {
   const width = window.innerWidth;
-  const height = window.innerHeight
-  cgv.resize(width-428, height-100);
+  const height = window.innerHeight;
+  const toolbar = document.getElementById('svg-testing-toolbar');
+  const toolbarHeight = svgModeCheckbox.checked ? (toolbar?.offsetHeight || 0) + 8 : 0;
+  cgv.resize(width-428, height-100-toolbarHeight);
 
   const testDrawRange = document.getElementById('test-draw-range').checked;
   testDrawRange && (cgv.canvas._testDrawRange = testDrawRange);
+  scheduleSVGPreviewRefresh();
 }
 
 // const fullSize = document.getElementById('option-full-size');
@@ -811,12 +815,12 @@ fullSizeCheckbox.addEventListener('click', (e) => {
 function resizeAction(resize) {
   fullSizeCheckbox.checked = resize;
   if (resize) {
-    svgModeAction(false); // Turn off SVG mode
     window.addEventListener('resize', myResize)
     myResize();
   } else {
     window.removeEventListener('resize', myResize)
     cgv.resize(defaultSize, defaultSize);
+    scheduleSVGPreviewRefresh();
   }
 }
 
@@ -887,31 +891,153 @@ debugAction(debug);
 // SVG Testing
 ///////////////////////////////////////////////////////////////////////////////
 
+const svgSection = document.getElementById('svg-section');
+const svgDiv = document.getElementById('svg-map');
+const svgTestingToolbar = document.getElementById('svg-testing-toolbar');
+const svgPreviewStatus = document.getElementById('svg-preview-status');
+const createSVGBtn = document.getElementById('create-svg');
+const downloadSVGBtn = document.getElementById('download-svg');
+const svgCanvasViewBtn = document.getElementById('svg-view-canvas');
+const svgPreviewViewBtn = document.getElementById('svg-view-preview');
+let svgPreviewFrame;
+let svgAutoRefreshTimer;
+let svgAutoRefreshPending = false;
+
 svgModeCheckbox.addEventListener('click', (e) => {
   svgModeAction(e.target.checked);
 });
 
 function svgModeAction(svgMode) {
-  const svgSection = document.getElementById('svg-section');
   svgModeCheckbox.checked = svgMode;
   if (svgMode) {
-    resizeAction(false);
-    svgSection.style.visibility = 'visible';
-    svgSection.style.display = 'block';
+    svgTestingToolbar.style.display = 'flex';
+    setSVGPreviewView('canvas');
+    if (fullSizeCheckbox.checked) {
+      myResize();
+    }
+    scheduleSVGPreviewRefresh();
   } else {
-    svgSection.style.visibility = 'hidden';
-    svgSection.style.display = 'none';
+    if (svgPreviewFrame) {
+      cancelAnimationFrame(svgPreviewFrame);
+      svgPreviewFrame = undefined;
+    }
+    if (svgAutoRefreshTimer) {
+      clearTimeout(svgAutoRefreshTimer);
+      svgAutoRefreshTimer = undefined;
+    }
+    svgAutoRefreshPending = false;
+    createSVGBtn.disabled = false;
+    svgTestingToolbar.style.display = 'none';
+    setSVGPreviewView('canvas');
+    svgDiv.innerHTML = '';
+    setSVGPreviewStatus('Enable SVG testing to create a preview.');
+    if (fullSizeCheckbox.checked) {
+      myResize();
+    }
   }
 }
 
-const createSVGBtn = document.getElementById('create-svg');
-createSVGBtn.addEventListener('click', (e) => {
-  const svgDiv = document.getElementById('svg-map');
-  svgDiv.innerHTML = cgv.io.getSVG();
+function setSVGPreviewView(view) {
+  const showSVG = view === 'svg' && Boolean(svgDiv.querySelector('svg'));
+  document.querySelector('.map-area').style.display = showSVG ? 'none' : 'block';
+  svgSection.style.display = showSVG ? 'block' : 'none';
+  svgSection.style.visibility = showSVG ? 'visible' : 'hidden';
+  svgCanvasViewBtn.classList.toggle('is-active', !showSVG);
+  svgPreviewViewBtn.classList.toggle('is-active', showSVG);
+  svgCanvasViewBtn.setAttribute('aria-pressed', String(!showSVG));
+  svgPreviewViewBtn.setAttribute('aria-pressed', String(showSVG));
+}
+
+svgCanvasViewBtn.addEventListener('click', () => {
+  setSVGPreviewView('canvas');
 });
-const downloadSVGBtn = document.getElementById('download-svg');
-downloadSVGBtn.addEventListener('click', (e) => {
-  cgv.io.downloadSVG('cgview.svg');
+
+svgPreviewViewBtn.addEventListener('click', () => {
+  if (svgDiv.querySelector('svg')) {
+    setSVGPreviewView('svg');
+  } else {
+    queueSVGPreview();
+  }
+});
+
+createSVGBtn.addEventListener('click', () => {
+  queueSVGPreview();
+});
+
+downloadSVGBtn.addEventListener('click', () => {
+  try {
+    cgv.io.downloadSVG('cgview.svg');
+    setSVGPreviewStatus('Downloaded an SVG of the current map.', 'ready');
+  } catch (error) {
+    setSVGPreviewStatus(`Could not download SVG: ${error.message}`, 'error');
+  }
+});
+
+function setSVGPreviewStatus(message, state = '') {
+  svgPreviewStatus.textContent = message;
+  if (state) {
+    svgPreviewStatus.dataset.state = state;
+  } else {
+    delete svgPreviewStatus.dataset.state;
+  }
+}
+
+function queueSVGPreview() {
+  if (!svgModeCheckbox.checked) { return; }
+  if (svgPreviewFrame) {
+    cancelAnimationFrame(svgPreviewFrame);
+  }
+  setSVGPreviewStatus('Generating preview…', 'working');
+  createSVGBtn.disabled = true;
+  svgPreviewFrame = requestAnimationFrame(() => {
+    svgPreviewFrame = undefined;
+    try {
+      svgDiv.innerHTML = cgv.io.getSVG();
+      setSVGPreviewView('svg');
+      setSVGPreviewStatus('Preview matches the current map.', 'ready');
+    } catch (error) {
+      svgDiv.innerHTML = '';
+      setSVGPreviewView('canvas');
+      setSVGPreviewStatus(`Could not create SVG preview: ${error.message}`, 'error');
+    } finally {
+      createSVGBtn.disabled = false;
+    }
+  });
+}
+
+function scheduleSVGPreviewRefresh() {
+  if (!svgModeCheckbox.checked) { return; }
+  svgAutoRefreshPending = true;
+  setSVGPreviewStatus('Generating preview…', 'working');
+  createSVGBtn.disabled = true;
+  clearTimeout(svgAutoRefreshTimer);
+  svgAutoRefreshTimer = setTimeout(() => {
+    svgAutoRefreshTimer = undefined;
+    svgAutoRefreshPending = false;
+    queueSVGPreview();
+  }, 200);
+}
+
+function markSVGPreviewStale() {
+  if (svgAutoRefreshPending) {
+    scheduleSVGPreviewRefresh();
+    return;
+  }
+  if (svgModeCheckbox.checked && svgDiv.querySelector('svg')) {
+    setSVGPreviewStatus('Map changed — refresh the SVG preview.', 'stale');
+  }
+}
+
+cgv.on('zoom-end.svg-preview', markSVGPreviewStale);
+cgv.on('viewer-update.svg-preview', markSVGPreviewStale);
+cgv.on('tracks-update.svg-preview', markSVGPreviewStale);
+cgv.on('features-update.svg-preview', markSVGPreviewStale);
+cgv.on('plots-update.svg-preview', markSVGPreviewStale);
+document.querySelector('.cgv-controls').addEventListener('click', markSVGPreviewStale);
+document.querySelector('.test-sidebar').addEventListener('input', (event) => {
+  if (!event.target.closest('.section-options')) {
+    markSVGPreviewStale();
+  }
 });
 
 
