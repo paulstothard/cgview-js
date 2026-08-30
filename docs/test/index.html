@@ -38,7 +38,7 @@
 
     <!-- Dev Page -->
     <script src='performance.js'></script>
-    <link rel="stylesheet" href="test.css?v=map-loading-1" />
+    <link rel="stylesheet" href="test.css?v=zoom-detail-layout-1" />
     <!-- Test Map Data -->
     <script src='maps.js?v=feature-track-labels-1'></script>
 
@@ -146,39 +146,55 @@
         <div class='section-zoom-details'>
           <div class='test-heading'>Zoom Detail Features</div>
           <div class='zoom-detail-grid'>
-            <label><input id='zoom-detail-translations' type='checkbox' /> Six-frame translation</label>
-            <label><input id='zoom-detail-ruler' type='checkbox' /> Detailed sequence ruler</label>
-            <label><input id='zoom-detail-base-colors' type='checkbox' /> Color DNA bases</label>
-            <label><input id='zoom-detail-feature-directions' type='checkbox' /> Feature direction chevrons</label>
-            <label><input id='zoom-detail-track-labels' type='checkbox' /> Feature track names</label>
-            <label for='zoom-detail-edge-padding'>Translation edge padding</label>
-            <input id='zoom-detail-edge-padding' class='form-control form-control-sm' type='number' min='0' max='20' step='1' />
-            <label for='zoom-detail-label-mode'>Feature label mode</label>
-            <select id='zoom-detail-label-mode' class='form-select form-select-sm'>
-              <option value='external'>External only</option>
-              <option value='inline'>Inline only</option>
-              <option value='both'>Inline + external fallback</option>
-              <option value='none'>Hidden</option>
-            </select>
-            <label for='zoom-detail-track'>Feature track</label>
-            <select id='zoom-detail-track' class='form-select form-select-sm'></select>
-            <label for='zoom-detail-track-position'>Feature track position</label>
-            <select id='zoom-detail-track-position' class='form-select form-select-sm'>
-              <option value='outside'>Outside backbone</option>
-              <option value='inside'>Inside backbone</option>
-              <option value='around'>Around backbone</option>
-              <option value='along'>Along backbone</option>
-            </select>
-            <label><input id='zoom-detail-label-shrink' type='checkbox' /> Shrink inline labels</label>
-            <label><input id='zoom-detail-label-truncate' type='checkbox' /> Truncate inline labels</label>
-            <label><input id='zoom-detail-highlight-starts' type='checkbox' /> Highlight start codons</label>
-            <label><input id='zoom-detail-highlight-stops' type='checkbox' /> Highlight stop codons</label>
-            <label class='zoom-detail-color' for='zoom-detail-start-color'>Start fill <input id='zoom-detail-start-color' type='color' /></label>
-            <label class='zoom-detail-color' for='zoom-detail-stop-color'>Stop fill <input id='zoom-detail-stop-color' type='color' /></label>
-            <label for='zoom-detail-genetic-code'>Genetic code</label>
-            <select id='zoom-detail-genetic-code' class='form-select form-select-sm'></select>
-            <label for='zoom-detail-min-font'>Minimum label font</label>
-            <input id='zoom-detail-min-font' class='form-control form-control-sm' type='number' min='6' max='16' step='1' />
+            <label class='zoom-detail-check'><input id='zoom-detail-translations' type='checkbox' /> <span>Six-frame translation</span></label>
+            <label class='zoom-detail-check'><input id='zoom-detail-ruler' type='checkbox' /> <span>Detailed sequence ruler</span></label>
+            <label class='zoom-detail-check'><input id='zoom-detail-base-colors' type='checkbox' /> <span>Color DNA bases</span></label>
+            <label class='zoom-detail-check'><input id='zoom-detail-feature-directions' type='checkbox' /> <span>Feature direction chevrons</span></label>
+            <label class='zoom-detail-check'><input id='zoom-detail-track-labels' type='checkbox' /> <span>Feature track names</span></label>
+            <div class='zoom-detail-grid-spacer' aria-hidden='true'></div>
+
+            <label class='zoom-detail-field' for='zoom-detail-edge-padding'>
+              <span>Translation edge padding</span>
+              <input id='zoom-detail-edge-padding' class='form-control form-control-sm' type='number' min='0' max='20' step='1' />
+            </label>
+            <label class='zoom-detail-field' for='zoom-detail-label-mode'>
+              <span>Feature label mode</span>
+              <select id='zoom-detail-label-mode' class='form-select form-select-sm'>
+                <option value='external'>External only</option>
+                <option value='inline'>Inline only</option>
+                <option value='both'>Inline + external fallback</option>
+                <option value='none'>Hidden</option>
+              </select>
+            </label>
+            <label class='zoom-detail-field' for='zoom-detail-track'>
+              <span>Feature track</span>
+              <select id='zoom-detail-track' class='form-select form-select-sm'></select>
+            </label>
+            <label class='zoom-detail-field' for='zoom-detail-track-position'>
+              <span>Feature track position</span>
+              <select id='zoom-detail-track-position' class='form-select form-select-sm'>
+                <option value='outside'>Outside backbone</option>
+                <option value='inside'>Inside backbone</option>
+                <option value='around'>Around backbone</option>
+                <option value='along'>Along backbone</option>
+              </select>
+            </label>
+
+            <label class='zoom-detail-check'><input id='zoom-detail-label-shrink' type='checkbox' /> <span>Shrink inline labels</span></label>
+            <label class='zoom-detail-check'><input id='zoom-detail-label-truncate' type='checkbox' /> <span>Truncate inline labels</span></label>
+            <label class='zoom-detail-check'><input id='zoom-detail-highlight-starts' type='checkbox' /> <span>Highlight start codons</span></label>
+            <label class='zoom-detail-check'><input id='zoom-detail-highlight-stops' type='checkbox' /> <span>Highlight stop codons</span></label>
+
+            <label class='zoom-detail-color' for='zoom-detail-start-color'><span>Start fill</span><input id='zoom-detail-start-color' type='color' /></label>
+            <label class='zoom-detail-color' for='zoom-detail-stop-color'><span>Stop fill</span><input id='zoom-detail-stop-color' type='color' /></label>
+            <label class='zoom-detail-field' for='zoom-detail-genetic-code'>
+              <span>Genetic code</span>
+              <select id='zoom-detail-genetic-code' class='form-select form-select-sm'></select>
+            </label>
+            <label class='zoom-detail-field' for='zoom-detail-min-font'>
+              <span>Minimum label font</span>
+              <input id='zoom-detail-min-font' class='form-control form-control-sm' type='number' min='6' max='16' step='1' />
+            </label>
           </div>
           <button id='zoom-detail-zoom' type='button' class='btn btn-sm btn-outline-success'>Zoom to base-pair detail</button>
           <div class='zoom-detail-help'>Direct frames +1 to +3 draw outward; reverse frames −1 to −3 draw inward. Start and stop cells use separate fill, border, and text colors.</div>
