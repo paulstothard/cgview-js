@@ -45,6 +45,7 @@ describe('IO', () => {
       };
 
       expect(() => cgv.io.loadJSON(json)).not.toThrow();
+      expect(cgv.sequence.colorBases).toBe(true);
       expect(cgv.sequence.translation.visible).toBe(false);
       expect(cgv.ruler.labelPosition).toBe('inner');
       expect(cgv.ruler.labelStyle).toBe('default');

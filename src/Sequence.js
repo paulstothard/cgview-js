@@ -29,6 +29,26 @@ import Color from './Color';
 import Font from './Font';
 import utils from './Utils';
 
+// Restrained semantic nucleotide colors. Two variants keep the same base-to-
+// hue mapping while remaining legible on light and dark backbone colors.
+const BASE_COLORS_ON_LIGHT = Object.freeze({
+  A: '#15803d',
+  T: '#b91c1c',
+  U: '#b91c1c',
+  G: '#1d4ed8',
+  C: '#a16207',
+  default: '#475569',
+});
+
+const BASE_COLORS_ON_DARK = Object.freeze({
+  A: '#4ade80',
+  T: '#f87171',
+  U: '#f87171',
+  G: '#60a5fa',
+  C: '#fbbf24',
+  default: '#cbd5e1',
+});
+
 /**
  * The CGView Sequence represents the sequence that makes up the map.
  *
@@ -68,6 +88,7 @@ import utils from './Utils';
  * [contigs](#contigs)<sup>iu</sup> | Array     | Array of contigs. Contigs are ignored if a seq is provided.
  * [font](#font)                    | String    | A string describing the font [Default: 'SansSerif, plain, 14']. See {@link Font} for details.
  * [color](#color)                  | String    | A string describing the sequence color [Default: 'black']. See {@link Color} for details.
+ * [colorBases](#colorBases)        | Boolean   | Color A, T/U, G, and C semantically when base-pair detail is visible [Default: true]
  * [translation](#translation)      | Object    | Six-frame translation options. See {@link SequenceTranslation}. [Default: hidden]
  * [visible](CGObject.html#visible) | Boolean   | Sequence sequence is visible when zoomed in enough [Default: true]
  * [meta](CGObject.html#meta)       | Object    | [Meta data](../tutorials/details-meta-data.html)
@@ -105,7 +126,9 @@ class Sequence extends CGObject {
     this._viewer = viewer;
     this.bpMargin = 2;
     this.color = utils.defaultFor(options.color, 'black');
+    this.colorBases = utils.defaultFor(options.colorBases, true);
     this.font = utils.defaultFor(options.font, 'sans-serif, plain, 14');
+    this._baseColorPalettes = new WeakMap();
 
     this._contigs = new CGArray();
 
@@ -957,6 +980,47 @@ class Sequence extends CGObject {
   }
 
   /**
+   * @member {Boolean} - Get or set whether detailed nucleotide glyphs use
+   * restrained semantic colors. Ambiguous bases remain neutral.
+   */
+  get colorBases() {
+    return this._colorBases;
+  }
+
+  set colorBases(value) {
+    this._colorBases = Boolean(value);
+  }
+
+  /**
+   * Return a stable nucleotide palette suited to the backbone color beneath a
+   * base. The decision is cached per Color object and does not allocate colors
+   * while drawing individual glyphs.
+   * @private
+   */
+  _baseColorPaletteForBp(bp) {
+    const mapBp = ((((Math.round(bp) - 1) % this.length) + this.length) % this.length) + 1;
+    const contig = this.hasMultipleContigs ? this.contigForBp(mapBp) : this.mapContig;
+    const backgroundColor = this.viewer.backbone.colorForContig(contig);
+    let palette = this._baseColorPalettes.get(backgroundColor);
+    if (!palette) {
+      palette = backgroundColor.relativeLuminance < 0.4 ?
+        BASE_COLORS_ON_DARK : BASE_COLORS_ON_LIGHT;
+      this._baseColorPalettes.set(backgroundColor, palette);
+    }
+    return palette;
+  }
+
+  /**
+   * Return the detailed-sequence text color for one base.
+   * @private
+   */
+  _colorForBase(base, bp) {
+    if (!this.colorBases) { return this.color.rgbaString; }
+    const palette = this._baseColorPaletteForBp(bp);
+    return palette[String(base || '').toUpperCase()] || palette.default;
+  }
+
+  /**
    * Draw one zoom-detail base. Circular glyphs follow the local map tangent
    * while remaining upright; linear glyphs retain their horizontal baseline.
    * @private
@@ -1008,7 +1072,9 @@ class Sequence extends CGObject {
       for (let i = 0, len = range.length; i < len; i++) {
         const tangentialAngle = this.viewer.format === 'circular' ?
           this.canvas.tangentialTextOrientationForBp(bp).angle : undefined;
+        if (this.colorBases) { ctx.fillStyle = this._colorForBase(seq[i], bp); }
         this._drawBase(ctx, seq[i], bp, centerOffset + centerOffsetDiff, yOffset, tangentialAngle);
+        if (this.colorBases) { ctx.fillStyle = this._colorForBase(complement[i], bp); }
         this._drawBase(ctx, complement[i], bp, centerOffset - centerOffsetDiff, yOffset, tangentialAngle);
         bp++;
       }
@@ -1034,7 +1100,7 @@ class Sequence extends CGObject {
   update(attributes) {
     this.viewer.updateRecords(this, attributes, {
       recordClass: 'Sequence',
-      validKeys: ['color', 'font', 'visible']
+      validKeys: ['color', 'colorBases', 'font', 'visible']
     });
     this.viewer.trigger('sequence-update', { attributes });
   }
@@ -1054,6 +1120,9 @@ class Sequence extends CGObject {
     // Optionally add default values
     if (!this.visible || options.includeDefaults) {
       json.visible = this.visible;
+    }
+    if (!this.colorBases || options.includeDefaults) {
+      json.colorBases = this.colorBases;
     }
     return json;
   }

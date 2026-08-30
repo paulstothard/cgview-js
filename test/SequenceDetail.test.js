@@ -51,6 +51,39 @@ describe('Sequence zoom detail', () => {
     expect(ctx.rotate).toHaveBeenLastCalledWith(0.4);
   });
 
+  test('colors detailed bases by default with a palette suited to the backbone', () => {
+    const cgv = new Viewer('#map', {sequence: {seq: 'ATGCN'}});
+
+    expect(cgv.sequence.colorBases).toBe(true);
+    // The default grey backbone uses the brighter dark-background palette.
+    expect(cgv.sequence._colorForBase('A', 1)).toBe('#4ade80');
+    expect(cgv.sequence._colorForBase('T', 2)).toBe('#f87171');
+    expect(cgv.sequence._colorForBase('G', 3)).toBe('#60a5fa');
+    expect(cgv.sequence._colorForBase('C', 4)).toBe('#fbbf24');
+    expect(cgv.sequence._colorForBase('N', 5)).toBe('#cbd5e1');
+
+    cgv.backbone.color = 'white';
+    expect(cgv.sequence._colorForBase('A', 1)).toBe('#15803d');
+    expect(cgv.sequence._colorForBase('U', 2)).toBe('#b91c1c');
+    expect(cgv.sequence._colorForBase('G', 3)).toBe('#1d4ed8');
+    expect(cgv.sequence._colorForBase('C', 4)).toBe('#a16207');
+    expect(cgv.sequence._colorForBase('N', 5)).toBe('#475569');
+  });
+
+  test('can disable detailed base coloring and round trip the option', () => {
+    const cgv = new Viewer('#map', {
+      sequence: {seq: 'ATGC', color: 'navy', colorBases: false},
+    });
+
+    expect(cgv.sequence.colorBases).toBe(false);
+    expect(cgv.sequence._colorForBase('A', 1)).toBe('rgba(0,0,128,1)');
+    expect(cgv.io.toJSON().cgview.sequence.colorBases).toBe(false);
+
+    const secondViewer = new Viewer('#map');
+    secondViewer.io.loadJSON(cgv.io.toJSON());
+    expect(secondViewer.sequence.colorBases).toBe(false);
+  });
+
   test('never returns an upside-down tangential angle', () => {
     const cgv = new Viewer('#map', {sequence: {length: 360}});
 

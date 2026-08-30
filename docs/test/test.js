@@ -320,6 +320,7 @@ clearBtn.addEventListener('click', (e) => {
 
 const translationsCheckbox = document.getElementById('zoom-detail-translations');
 const curvedRulerCheckbox = document.getElementById('zoom-detail-ruler');
+const baseColorsCheckbox = document.getElementById('zoom-detail-base-colors');
 const featureDirectionsCheckbox = document.getElementById('zoom-detail-feature-directions');
 const featureTrackLabelsCheckbox = document.getElementById('zoom-detail-track-labels');
 const translationEdgePaddingInput = document.getElementById('zoom-detail-edge-padding');
@@ -532,6 +533,7 @@ function syncZoomDetailControls() {
   translationEdgePaddingInput.value = cgv.sequence.translation.edgePadding;
   translationEdgePaddingInput.disabled = !cgv.sequence.translation.visible;
   curvedRulerCheckbox.checked = cgv.ruler.labelPosition === 'outer' && cgv.ruler.labelStyle === 'curved';
+  baseColorsCheckbox.checked = cgv.sequence.colorBases;
   featureDirectionsCheckbox.checked = cgv.settings.showFeatureDirectionIndicators;
   featureTrackLabelsCheckbox.checked = cgv.settings.showFeatureTrackLabels;
   featureLabelModeSelect.value = cgv.annotation.labelPosition;
@@ -564,6 +566,12 @@ function updateTranslation(attributes) {
 }
 
 cgv.on('sequence-translation-update.zoom-detail-controls', () => {
+  if (!cgv.loading) {
+    syncZoomDetailControls();
+  }
+});
+
+cgv.on('sequence-update.zoom-detail-controls', () => {
   if (!cgv.loading) {
     syncZoomDetailControls();
   }
@@ -632,6 +640,13 @@ curvedRulerCheckbox.addEventListener('change', (e) => {
     {labelPosition: 'inner', labelStyle: 'default'}
   );
   cgv.draw();
+});
+
+baseColorsCheckbox.addEventListener('change', (e) => {
+  cgv.sequence.update({colorBases: e.target.checked});
+  if (cgv.sequence.isDetailVisible(cgv.backbone.pixelsPerBp())) {
+    cgv.draw();
+  }
 });
 
 featureDirectionsCheckbox.addEventListener('change', (e) => {
