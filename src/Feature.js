@@ -892,13 +892,14 @@ class Feature extends CGObject {
     }
 
     const color = this.color.copy();
-    color.highlight();
+    color.highlightForBackground(this.viewer.settings.backgroundColor);
+    const drawOptions = {color, showShading: false};
     if (slot && slot.features().includes(this)) {
-      this.draw('ui', slot.centerOffset, slot.thickness, slot.visibleRange, {color: color});
+      this.draw('ui', slot.centerOffset, slot.thickness, slot.visibleRange, drawOptions);
     } else {
       this.viewer.slots().each( (i, slot) => {
         if (slot.features().includes(this)) {
-          this.draw('ui', slot.centerOffset, slot.thickness, slot.visibleRange, {color: color});
+          this.draw('ui', slot.centerOffset, slot.thickness, slot.visibleRange, drawOptions);
         }
       });
     }

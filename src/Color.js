@@ -305,6 +305,28 @@ class Color {
   }
 
   /**
+   * Adjust this color away from its rendered background while preserving its
+   * identity and opacity. Translucent colors are evaluated after compositing
+   * so the direction of the adjustment matches what is actually visible.
+   * @param {(Color|String|Object)} background - Rendered background color.
+   * @param {Number} colorAdjustment - Proportion of available lightness to use.
+   * @return {Color} This color.
+   * @private
+   */
+  highlightForBackground(background, colorAdjustment = 0.16) {
+    const renderedColor = this.compositeOver(background);
+    const lighten = renderedColor.contrastRatio('white') >= renderedColor.contrastRatio('black');
+    const fraction = utils.constrain(colorAdjustment, 0, 1);
+    const target = lighten ? 255 : 0;
+    const rgba = Color.rgbaString2rgba(this.rgbaString);
+    rgba.r = Math.round(rgba.r + ((target - rgba.r) * fraction));
+    rgba.g = Math.round(rgba.g + ((target - rgba.g) * fraction));
+    rgba.b = Math.round(rgba.b + ((target - rgba.b) * fraction));
+    this.rgba = rgba;
+    return this;
+  }
+
+  /**
    * Lightens the color.
    * @param {Number} fraction - Amount to lighten the color by
    * @private
@@ -916,4 +938,3 @@ Color.names = function() {
 };
 
 export default Color;
-

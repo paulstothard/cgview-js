@@ -403,4 +403,26 @@ describe('Feature', () => {
 
   });
 
+  test('draws hover highlights without applying a second shading pass', () => {
+    const feature = cgv.addFeatures([
+      {name: 'f1', start: 10, stop: 20, color: 'rgb(0,128,0)'},
+    ])[0];
+    const slot = {
+      centerOffset: 100,
+      thickness: 20,
+      visibleRange: feature.mapRange,
+      features: () => [feature],
+    };
+    const draw = jest.spyOn(feature, 'draw').mockImplementation(() => {});
+
+    feature.highlight(slot);
+
+    expect(draw).toHaveBeenCalledWith(
+      'ui', 100, 20, feature.mapRange,
+      expect.objectContaining({showShading: false})
+    );
+    expect(draw.mock.calls[0][4].color.relativeLuminance)
+      .toBeGreaterThan(feature.color.relativeLuminance);
+  });
+
 });
