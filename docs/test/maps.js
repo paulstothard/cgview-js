@@ -29,7 +29,7 @@ maps = {
     url: 'maps/contigs_ecoli_pa2.json',
   },
 
-  // LARGE - NOT WORKING
+  // LARGE
   large: {
     name: 'L. guizhouensis [9,997,872 bp]',
     type: 'large',

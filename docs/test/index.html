@@ -38,7 +38,7 @@
 
     <!-- Dev Page -->
     <script src='performance.js'></script>
-    <link rel="stylesheet" href="test.css" />
+    <link rel="stylesheet" href="test.css?v=map-loading-1" />
     <!-- Test Map Data -->
     <script src='maps.js?v=feature-track-labels-1'></script>
 
@@ -117,6 +117,7 @@
         <div class='map-select-section'>
           <div class='test-heading'>Choose Map</div>
           <select id='map-select' class='form-select form-select-sm'></select>
+          <div id='map-load-status' role='status' aria-live='polite' hidden></div>
         </div>
         <div id="file-section">
           <input type='file' id='file-input' />
@@ -263,7 +264,7 @@
     <!-- Bootstrap JavaScript -->
     <script src="../scripts/bootstrap.min.js"></script>
 
-    <script src='test.js?v=feature-track-labels-1'></script>
+    <script src='test.js?v=map-loading-1'></script>
     <script src='../scripts/controls.js?v=feature-track-labels-1'></script>
 
   </body>

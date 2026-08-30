@@ -125,10 +125,6 @@ performanceCheckbox.checked = showPerformanceTest;
 const svgModeCheckbox = document.getElementById('option-show-svg');
 svgModeCheckbox.checked = showSVGTest;
 
-// Load default map
-loadMapFromID(initialMap);
-
-
 ///////////////////////////////////////////////////////////////////////////////
 // Map Creation and Selection
 ///////////////////////////////////////////////////////////////////////////////
@@ -137,6 +133,10 @@ loadMapFromID(initialMap);
 // Add maps from maps.js to Select
 // Using global variable 'maps' from maps.js
 const mapSelect = document.getElementById('map-select');
+const mapSelectSection = document.querySelector('.map-select-section');
+const mapLoadStatus = document.getElementById('map-load-status');
+let activeMapRequest;
+let mapRequestSerial = 0;
 const groups = { labels: 'Labels', test: 'Tests', basic: 'Basic', large: 'Large', contigs: 'Contigs', version: 'Versions', bad: 'Bad' };
 const order = ['basic', 'contigs', 'large', 'test', 'labels', 'version', 'bad'];
 const optionsByGroup = {};
@@ -185,6 +185,10 @@ mapSelect.addEventListener('change', (e) => {
   }, 100);
 });
 
+// Populate the selector before loading so initial-load progress and failures
+// are visible in exactly the same way as later selections.
+loadMapFromID(initialMap);
+
 // Clear the file input when the file section is closed
 function clearFileInput() {
   const fileInput = document.getElementById('file-input');
@@ -217,14 +221,36 @@ fileInput.addEventListener('change', (event) => {
 function loadMapFromID(id) {
   if (id === 'file') { return; }
   if (!maps[id]) { return; }
-  const url = maps[id].url
+  const map = maps[id];
+  const url = map.url;
+  const requestSerial = ++mapRequestSerial;
+  const startedAt = performance.now();
+
+  if (activeMapRequest && activeMapRequest.readyState !== XMLHttpRequest.DONE) {
+    activeMapRequest.abort();
+  }
+  mapSelect.value = id;
+  setMapLoadStatus(`Loading ${map.name}…`, 'loading');
   console.log(`Loading Map: ${url}`);
-  var request = new XMLHttpRequest();
+  const request = new XMLHttpRequest();
+  activeMapRequest = request;
   request.open('GET', url, true);
   request.onload = function() {
-    const json = applyZoomDetailDemoDefaults(JSON.parse(request.responseText));
-    cgv.io.loadJSON(json);
-    cgv.name = maps[id].name;
+    if (requestSerial !== mapRequestSerial) { return; }
+    if (request.status !== 0 && (request.status < 200 || request.status >= 300)) {
+      mapLoadFailed(map, `HTTP ${request.status}`);
+      return;
+    }
+
+    let json;
+    try {
+      json = applyZoomDetailDemoDefaults(JSON.parse(request.responseText));
+      cgv.io.loadJSON(json);
+    } catch (error) {
+      mapLoadFailed(map, error.message);
+      return;
+    }
+    cgv.name = map.name;
 
     // Default label placement
     cgv.annotation.labelPlacement = labelPlacement;
@@ -244,8 +270,45 @@ function loadMapFromID(id) {
     setTimeout( () => {
       cgv.resize();
     },1);
+    const elapsedSeconds = ((performance.now() - startedAt) / 1000).toFixed(1);
+    setMapLoadStatus(`Loaded ${map.name} in ${elapsedSeconds} s`, 'success');
+    activeMapRequest = undefined;
   };
+  request.onerror = function() {
+    if (requestSerial === mapRequestSerial) {
+      mapLoadFailed(map, 'the browser blocked or could not read the map file');
+    }
+  };
+  request.ontimeout = function() {
+    if (requestSerial === mapRequestSerial) {
+      mapLoadFailed(map, 'the request timed out');
+    }
+  };
+  request.timeout = 30000;
   request.send();
+}
+
+function setMapLoadStatus(message, state) {
+  mapLoadStatus.hidden = false;
+  mapLoadStatus.dataset.state = state;
+  mapLoadStatus.textContent = message;
+  mapSelect.disabled = state === 'loading';
+  if (state === 'loading') {
+    mapSelectSection.setAttribute('aria-busy', 'true');
+  } else {
+    mapSelectSection.removeAttribute('aria-busy');
+  }
+}
+
+function mapLoadFailed(map, reason) {
+  activeMapRequest = undefined;
+  setMapLoadStatus(`Could not load ${map.name}: ${reason}.`, 'error');
+  if (window.location.protocol === 'file:') {
+    const serverLink = document.createElement('a');
+    serverLink.href = 'http://localhost:8765/test/index.html';
+    serverLink.textContent = 'Open the local-server viewer';
+    mapLoadStatus.appendChild(serverLink);
+  }
 }
 
 
