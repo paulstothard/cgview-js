@@ -47,7 +47,6 @@ export default function initializeZooming(viewer) {
   // Keep track of pan/translate changes
   let panX = 0;
   let panY = 0;
-  let zoomStartFactor = viewer.zoomFactor;
 
   function zoomFilter(d3Event) {
     const isWheel = d3Event.type === 'wheel';
@@ -68,8 +67,6 @@ export default function initializeZooming(viewer) {
   }
 
   function zoomstart() {
-    zoomStartFactor = viewer.zoomFactor;
-    viewer._cancelSafariZoomRedraw();
     viewer.trigger('zoom-start');
     viewer.highlighter.hidePopoverBox();
   }
@@ -121,11 +118,7 @@ export default function initializeZooming(viewer) {
   }
 
   function zoomend() {
-    const zoomChanged = Math.abs(viewer.zoomFactor - zoomStartFactor) > 0.000001;
     viewer.trigger('zoom-end');
     viewer.drawFull();
-    if (zoomChanged) {
-      viewer._scheduleSafariZoomRedraw();
-    }
   }
 };
