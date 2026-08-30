@@ -687,6 +687,8 @@ class Canvas {
    * responsibility for text measurement and caching; this method centralizes
    * the shared circular geometry used by ruler and inline feature labels.
    * @param {Object} options - Curved-text drawing options.
+   * @param {String} [options.haloColor] - Optional protective text-stroke color.
+   * @param {Number} [options.haloWidth=3] - Total protective stroke width.
    * @return {Boolean} Whether the text was drawn.
    * @private
    */
@@ -701,6 +703,8 @@ class Canvas {
       totalWidth,
       font,
       color,
+      haloColor,
+      haloWidth = 3,
     } = options;
     const pixelsPerBp = this.pixelsPerBp(centerOffset);
     if (!Number.isFinite(pixelsPerBp) || pixelsPerBp <= 0 || characters.length === 0) {
@@ -718,6 +722,13 @@ class Canvas {
     ctx.save();
     ctx.font = font;
     ctx.fillStyle = color;
+    if (haloColor && haloWidth > 0) {
+      ctx.strokeStyle = haloColor;
+      ctx.lineWidth = haloWidth;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.miterLimit = 2;
+    }
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     for (let index = 0; index < characters.length; index += 1) {
@@ -729,6 +740,9 @@ class Canvas {
       ctx.save();
       ctx.translate(point.x, point.y);
       ctx.rotate(angle);
+      if (haloColor && haloWidth > 0) {
+        ctx.strokeText(characters[index], 0, 0);
+      }
       ctx.fillText(characters[index], 0, 0);
       ctx.restore();
       cursor += width;

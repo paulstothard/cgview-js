@@ -11,23 +11,62 @@ describe('Zoom detail options', () => {
 
   test('serializes and updates the outer curved ruler configuration', () => {
     const cgv = new Viewer('#map', {
-      ruler: {labelPosition: 'outer', labelStyle: 'curved'},
+      ruler: {
+        labelPosition: 'outer',
+        labelStyle: 'curved',
+        showLabelHalo: true,
+        labelHaloColor: 'rgba(240,240,240,0.9)',
+        labelHaloWidth: 4,
+      },
     });
 
     expect(cgv.ruler.labelPosition).toBe('outer');
     expect(cgv.ruler.labelStyle).toBe('curved');
+    expect(cgv.ruler.showLabelHalo).toBe(true);
+    expect(cgv.ruler.labelHaloWidth).toBe(4);
 
     cgv.ruler.update({labelPosition: 'both', tickLength: 7});
     const json = cgv.ruler.toJSON();
     expect(json.labelPosition).toBe('both');
     expect(json.labelStyle).toBe('curved');
     expect(json.tickLength).toBe(7);
+    expect(json.showLabelHalo).toBe(true);
+    expect(json.labelHaloColor).toBe('rgba(240,240,240,0.9)');
+    expect(json.labelHaloWidth).toBe(4);
   });
 
   test('keeps the legacy ruler label behavior by default', () => {
     const cgv = new Viewer('#map');
     expect(cgv.ruler.labelPosition).toBe('inner');
     expect(cgv.ruler.labelStyle).toBe('default');
+    expect(cgv.ruler.showLabelHalo).toBe(false);
+    expect(cgv.ruler.labelHaloWidth).toBe(3);
+    expect(cgv.ruler.toJSON().labelHaloColor).toBeUndefined();
+  });
+
+  test('uses the live map background for an automatic ruler-label halo', () => {
+    const cgv = new Viewer('#map', {
+      settings: {backgroundColor: '#f8fafc'},
+      ruler: {showLabelHalo: true},
+    });
+
+    expect(cgv.ruler.labelHaloColor).toBe(cgv.settings.backgroundColor);
+    expect(cgv.ruler.labelHaloColor.rgbaString).toBe('rgba(248,250,252,1)');
+
+    cgv.settings.update({backgroundColor: '#111827'});
+    expect(cgv.ruler.labelHaloColor).toBe(cgv.settings.backgroundColor);
+    expect(cgv.ruler.labelHaloColor.rgbaString).toBe('rgba(17,24,39,1)');
+  });
+
+  test('inverts an explicit ruler-label halo with the ruler palette', () => {
+    const cgv = new Viewer('#map', {
+      ruler: {color: 'black', showLabelHalo: true, labelHaloColor: 'white'},
+    });
+
+    cgv.ruler.invertColors();
+
+    expect(cgv.ruler.color.rgbaString).toBe('rgba(255,255,255,1)');
+    expect(cgv.ruler.labelHaloColor.rgbaString).toBe('rgba(0,0,0,1)');
   });
 
   test('preserves the existing straight tangential ruler style', () => {
@@ -63,6 +102,34 @@ describe('Zoom detail options', () => {
     expect(ctx.measureText).not.toHaveBeenCalled();
   });
 
+  test('draws the curved ruler halo behind every glyph when enabled', () => {
+    const cgv = new Viewer('#map', {
+      width: 800,
+      height: 600,
+      settings: {backgroundColor: 'white'},
+      sequence: {length: 1000},
+      ruler: {
+        font: 'sans-serif, plain, 14',
+        labelPosition: 'outer',
+        labelStyle: 'curved',
+        showLabelHalo: true,
+        labelHaloWidth: 3,
+      },
+    });
+    const ctx = cgv.canvas.context('map');
+    ctx.fillText.mockClear();
+    ctx.strokeText.mockClear();
+
+    cgv.ruler.drawLabel(250, '250', 150, 'outer');
+
+    expect(ctx.strokeText.mock.calls.map(call => call[0])).toEqual(Array.from('250 bp'));
+    expect(ctx.fillText.mock.calls.map(call => call[0])).toEqual(Array.from('250 bp'));
+    for (let index = 0; index < ctx.fillText.mock.calls.length; index += 1) {
+      expect(ctx.strokeText.mock.invocationCallOrder[index])
+        .toBeLessThan(ctx.fillText.mock.invocationCallOrder[index]);
+    }
+  });
+
   test('keeps curved-style ruler labels straight in linear maps', () => {
     const cgv = new Viewer('#map', {
       width: 800,
@@ -80,6 +147,23 @@ describe('Zoom detail options', () => {
     expect(ctx.fillText).toHaveBeenCalledTimes(1);
     expect(ctx.fillText).toHaveBeenCalledWith('250 bp', expect.any(Number), expect.any(Number));
     expect(ctx.rotate).not.toHaveBeenCalled();
+  });
+
+  test('protects straight linear ruler labels with one halo stroke', () => {
+    const cgv = new Viewer('#map', {
+      sequence: {length: 1000},
+      ruler: {labelStyle: 'curved', showLabelHalo: true},
+    });
+    cgv.format = 'linear';
+    const ctx = cgv.canvas.context('map');
+    ctx.fillText.mockClear();
+    ctx.strokeText.mockClear();
+
+    cgv.ruler.drawLabel(250, '250', 150, 'outer');
+
+    expect(ctx.strokeText).toHaveBeenCalledTimes(1);
+    expect(ctx.strokeText).toHaveBeenCalledWith('250 bp', expect.any(Number), expect.any(Number));
+    expect(ctx.strokeText.mock.invocationCallOrder[0]).toBeLessThan(ctx.fillText.mock.invocationCallOrder[0]);
   });
 
   test('keeps feature direction indicators opt-in and serializes the setting', () => {

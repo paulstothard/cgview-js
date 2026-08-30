@@ -118,6 +118,12 @@ yield to the sequence rows. Overlapping inline labels use the same favorite-then
 length priority as external labels. In `both` mode, labels that cannot be placed
 inline remain eligible for external placement.
 
+Ruler labels can receive a rounded protective outline by setting
+`showLabelHalo` to `true`. By default the halo uses the current map background,
+so it continues to work after background-color changes and color inversion.
+Use `labelHaloColor` for an explicit color and `labelHaloWidth` to control the
+total stroke width. The halo defaults off to preserve existing map appearance.
+
 Set `settings.showFeatureDirectionIndicators` to `true` to draw sparse,
 low-contrast chevrons inside visible features once nucleotide detail is
 readable. Their color is derived from each feature color, and direct and
@@ -154,7 +160,9 @@ existing JSON maps retain their previous appearance.
             "font": "sans-serif,plain,10",
             "color": "rgba(0,0,0,1)",
             "labelPosition": "outer",
-            "labelStyle": "curved"
+            "labelStyle": "curved",
+            "showLabelHalo": true,
+            "labelHaloWidth": 3
         },
         "annotation": {
             "font": "sans-serif,plain,12",

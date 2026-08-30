@@ -22,7 +22,9 @@
       "font": "sans-serif,plain,10",
       "color": "rgba(45,49,55,1)",
       "labelPosition": "outer",
-      "labelStyle": "curved"
+      "labelStyle": "curved",
+      "showLabelHalo": true,
+      "labelHaloWidth": 3
     },
     "annotation": {
       "font": "sans-serif,bold,13",

@@ -44,6 +44,9 @@ import * as d3 from 'd3';
  * [color](#color)                  | String    | A string describing the color [Default: 'black']. See {@link Color} for details.
  * [labelPosition](#labelPosition)  | String    | Ruler sides that receive labels: 'inner', 'outer', 'both', or 'none' [Default: 'inner']
  * [labelStyle](#labelStyle)        | String    | Label orientation: 'default', 'tangential', or 'curved' [Default: 'default']
+ * [showLabelHalo](#showLabelHalo)  | Boolean   | Draw a protective outline behind ruler labels [Default: false]
+ * [labelHaloColor](#labelHaloColor) | String   | Optional halo color. When omitted, the current map background color is used.
+ * [labelHaloWidth](#labelHaloWidth) | Number   | Total width of the ruler-label halo stroke in pixels [Default: 3]
  * [visible](CGObject.html#visible) | Boolean   | Rulers are visible [Default: true]
  * [meta](CGObject.html#meta)       | Object    | [Meta data](../tutorials/details-meta-data.html) for ruler
  *
@@ -78,6 +81,9 @@ class Ruler extends CGObject {
     this.color = new Color( utils.defaultFor(options.color, 'black') );
     this.labelPosition = utils.defaultFor(options.labelPosition, 'inner');
     this.labelStyle = utils.defaultFor(options.labelStyle, 'default');
+    this.showLabelHalo = utils.defaultFor(options.showLabelHalo, false);
+    this.labelHaloColor = options.labelHaloColor;
+    this.labelHaloWidth = utils.defaultFor(options.labelHaloWidth, 3);
     this.lineCap = 'round';
 
     this.viewer.trigger('ruler-update', { attributes: this.toJSON({includeDefaults: true}) });
@@ -183,6 +189,48 @@ class Ruler extends CGObject {
 
   set labelStyle(value) {
     this._labelStyle = ['default', 'tangential', 'curved'].includes(value) ? value : 'default';
+  }
+
+  /**
+   * @member {Boolean} - Whether ruler labels receive a protective halo.
+   */
+  get showLabelHalo() {
+    return this._showLabelHalo;
+  }
+
+  set showLabelHalo(value) {
+    this._showLabelHalo = Boolean(value);
+  }
+
+  /**
+   * @member {Color} - Ruler-label halo color. When no explicit color is set,
+   * the current map background color is returned so the halo follows palette
+   * changes automatically.
+   */
+  get labelHaloColor() {
+    return this._labelHaloColor || this.viewer.settings.backgroundColor;
+  }
+
+  set labelHaloColor(value) {
+    if (value === undefined || value === null || value === 'auto') {
+      this._labelHaloColor = undefined;
+    } else if (value.toString() === 'Color') {
+      this._labelHaloColor = value;
+    } else {
+      this._labelHaloColor = new Color(value);
+    }
+  }
+
+  /**
+   * @member {Number} - Total width of the ruler-label halo stroke in pixels.
+   */
+  get labelHaloWidth() {
+    return this._labelHaloWidth;
+  }
+
+  set labelHaloWidth(value) {
+    const width = Number(value);
+    this._labelHaloWidth = Number.isFinite(width) ? Math.max(0, width) : 3;
   }
 
   /**
@@ -402,8 +450,26 @@ class Ruler extends CGObject {
     const attachmentPosition = this.layout.clockPositionForBp(bp, position === 'outer');
     const labelWidth = this.font.width(ctx, label);
     const labelPt = utils.rectOriginForAttachementPoint(labelAnchor, attachmentPosition, labelWidth, this.font.height);
-    // ctx.fillText(label, labelPt.x, labelPt.y);
-    ctx.fillText(label, labelPt.x, labelPt.y + this.font.height);
+    this._drawLabelText(ctx, label, labelPt.x, labelPt.y + this.font.height);
+  }
+
+  /**
+   * Stroke behind a label before filling it. The rounded background-colored
+   * stroke protects the glyphs without creating a rectangular label box.
+   * @private
+   */
+  _drawLabelText(ctx, label, x, y) {
+    if (this.showLabelHalo && this.labelHaloWidth > 0) {
+      ctx.save();
+      ctx.strokeStyle = this.labelHaloColor.rgbaString;
+      ctx.lineWidth = this.labelHaloWidth;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.miterLimit = 2;
+      ctx.strokeText(label, x, y);
+      ctx.restore();
+    }
+    ctx.fillText(label, x, y);
   }
 
   drawTangentialLabel(bp, label, centerOffset, position) {
@@ -421,7 +487,7 @@ class Ruler extends CGObject {
     ctx.rotate(angle);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText(label, 0, this.font.height * 0.35);
+    this._drawLabelText(ctx, label, 0, this.font.height * 0.35);
     ctx.restore();
   }
 
@@ -470,13 +536,17 @@ class Ruler extends CGObject {
       totalWidth: measurement.totalWidth,
       font: this.font.css,
       color: this.color.rgbaString,
+      haloColor: this.showLabelHalo ? this.labelHaloColor.rgbaString : undefined,
+      haloWidth: this.labelHaloWidth,
     });
   }
 
   invertColors() {
-    this.update({
-      color: this.color.invert().rgbaString
-    });
+    const attributes = {color: this.color.invert().rgbaString};
+    if (this._labelHaloColor) {
+      attributes.labelHaloColor = this._labelHaloColor.invert().rgbaString;
+    }
+    this.update(attributes);
   }
 
   /**
@@ -487,7 +557,7 @@ class Ruler extends CGObject {
   update(attributes) {
     this.viewer.updateRecords(this, attributes, {
       recordClass: 'Ruler',
-      validKeys: ['color', 'font', 'tickCount', 'tickWidth', 'tickLength', 'rulerPadding', 'spacing', 'labelPosition', 'labelStyle', 'visible']
+      validKeys: ['color', 'font', 'tickCount', 'tickWidth', 'tickLength', 'rulerPadding', 'spacing', 'labelPosition', 'labelStyle', 'showLabelHalo', 'labelHaloColor', 'labelHaloWidth', 'visible']
     });
     this.viewer.trigger('ruler-update', { attributes });
   }
@@ -506,8 +576,13 @@ class Ruler extends CGObject {
       spacing: this.spacing,
       labelPosition: this.labelPosition,
       labelStyle: this.labelStyle,
+      showLabelHalo: this.showLabelHalo,
+      labelHaloWidth: this.labelHaloWidth,
       // visible: this.visible
     };
+    if (this._labelHaloColor) {
+      json.labelHaloColor = this._labelHaloColor.rgbaString;
+    }
     // Optionally add default values
     if (!this.visible || options.includeDefaults) {
       json.visible = this.visible;

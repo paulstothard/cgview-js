@@ -294,6 +294,7 @@ clearBtn.addEventListener('click', (e) => {
 
 const translationsCheckbox = document.getElementById('zoom-detail-translations');
 const curvedRulerCheckbox = document.getElementById('zoom-detail-ruler');
+const rulerHaloCheckbox = document.getElementById('zoom-detail-ruler-halo');
 const featureDirectionsCheckbox = document.getElementById('zoom-detail-feature-directions');
 const translationEdgePaddingInput = document.getElementById('zoom-detail-edge-padding');
 const featureLabelModeSelect = document.getElementById('zoom-detail-label-mode');
@@ -350,6 +351,7 @@ function syncZoomDetailControls() {
   translationEdgePaddingInput.value = cgv.sequence.translation.edgePadding;
   translationEdgePaddingInput.disabled = !cgv.sequence.translation.visible;
   curvedRulerCheckbox.checked = cgv.ruler.labelPosition === 'outer' && cgv.ruler.labelStyle === 'curved';
+  rulerHaloCheckbox.checked = cgv.ruler.showLabelHalo;
   featureDirectionsCheckbox.checked = cgv.settings.showFeatureDirectionIndicators;
   featureLabelModeSelect.value = cgv.annotation.labelPosition;
   syncFeatureTrackControls();
@@ -413,6 +415,11 @@ curvedRulerCheckbox.addEventListener('change', (e) => {
     {labelPosition: 'outer', labelStyle: 'curved'} :
     {labelPosition: 'inner', labelStyle: 'default'}
   );
+  cgv.draw();
+});
+
+rulerHaloCheckbox.addEventListener('change', (e) => {
+  cgv.ruler.update({showLabelHalo: e.target.checked});
   cgv.draw();
 });
 

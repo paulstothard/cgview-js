@@ -12,7 +12,7 @@
 - Added marquee selection with shift-drag.
 - Added a Selection checkbox to the test page options.
 - Added opt-in six-frame sequence translation at base-pair zoom, using the viewer genetic code and contig-aware reading frames.
-- Added configurable ruler label side plus tangential and truly curved label orientations.
+- Added configurable ruler label side, tangential and truly curved orientations, and background-aware label halos.
 - Added fit-aware inline feature labels with bounded font shrinking and independent external-label visibility.
 - Added a focused zoom-detail map and live controls to the test page.
 - Updated the test page to select and reposition feature tracks from any loaded map.
