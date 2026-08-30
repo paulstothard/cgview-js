@@ -8,6 +8,7 @@
       "backgroundColor": "white",
       "showShading": true,
       "showFeatureDirectionIndicators": true,
+      "showFeatureTrackLabels": true,
       "showBorder": false,
       "arrowHeadLength": 0.25,
       "initialMapThicknessProportion": 0.16,

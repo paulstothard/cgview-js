@@ -130,6 +130,13 @@ readable. Their color is derived from each feature color, and direct and
 reverse strands point in opposite map directions. The default is `false`, so
 existing JSON maps retain their previous appearance.
 
+`settings.showFeatureTrackLabels` controls compact feature-track names that
+appear once the map is zoomed far enough and the track has sufficient visual
+space. Names are placed just inside the leading edge of each visible track
+side, follow circular map curvature, and use a background-derived protective
+outline. The default is `true`; JSON files that omit the setting receive the
+zoomed track identifiers automatically.
+
 ```json
 {
     "cgview": {
@@ -144,6 +151,7 @@ existing JSON maps retain their previous appearance.
             "backgroundColor": "rgba(255,255,255,1)",
             "showShading": true,
             "showFeatureDirectionIndicators": false,
+            "showFeatureTrackLabels": true,
             "showBorder": false,
             "borderColor": "rgba(0,0,0,1)",
             "borderThickness": 1.5,

@@ -321,6 +321,7 @@ clearBtn.addEventListener('click', (e) => {
 const translationsCheckbox = document.getElementById('zoom-detail-translations');
 const curvedRulerCheckbox = document.getElementById('zoom-detail-ruler');
 const featureDirectionsCheckbox = document.getElementById('zoom-detail-feature-directions');
+const featureTrackLabelsCheckbox = document.getElementById('zoom-detail-track-labels');
 const translationEdgePaddingInput = document.getElementById('zoom-detail-edge-padding');
 const featureLabelModeSelect = document.getElementById('zoom-detail-label-mode');
 const featureTrackSelect = document.getElementById('zoom-detail-track');
@@ -532,6 +533,7 @@ function syncZoomDetailControls() {
   translationEdgePaddingInput.disabled = !cgv.sequence.translation.visible;
   curvedRulerCheckbox.checked = cgv.ruler.labelPosition === 'outer' && cgv.ruler.labelStyle === 'curved';
   featureDirectionsCheckbox.checked = cgv.settings.showFeatureDirectionIndicators;
+  featureTrackLabelsCheckbox.checked = cgv.settings.showFeatureTrackLabels;
   featureLabelModeSelect.value = cgv.annotation.labelPosition;
   syncFeatureTrackControls();
   shrinkInlineLabelsCheckbox.checked = cgv.annotation.inlineLabelAllowShrinking;
@@ -568,6 +570,12 @@ cgv.on('sequence-translation-update.zoom-detail-controls', () => {
 });
 
 cgv.on('annotation-update.zoom-detail-controls', () => {
+  if (!cgv.loading) {
+    syncZoomDetailControls();
+  }
+});
+
+cgv.on('settings-update.zoom-detail-controls', () => {
   if (!cgv.loading) {
     syncZoomDetailControls();
   }
@@ -628,6 +636,10 @@ curvedRulerCheckbox.addEventListener('change', (e) => {
 
 featureDirectionsCheckbox.addEventListener('change', (e) => {
   cgv.settings.update({showFeatureDirectionIndicators: e.target.checked});
+});
+
+featureTrackLabelsCheckbox.addEventListener('change', (e) => {
+  cgv.settings.update({showFeatureTrackLabels: e.target.checked});
 });
 
 featureLabelModeSelect.addEventListener('change', (e) => {

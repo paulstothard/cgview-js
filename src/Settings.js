@@ -41,6 +41,7 @@ import utils from './Utils';
  * [backgroundColor](#backgroundColor) | String    | A string describing the background color of the map [Default: 'white']. See {@link Color} for details.
  * [showShading](#showShading)         | Boolean   | Should a shading effect be drawn on the features [Default: true]
  * [showFeatureDirectionIndicators](#showFeatureDirectionIndicators) | Boolean | Show subtle, repeated strand-direction indicators inside features when nucleotide detail is readable [Default: false]
+ * [showFeatureTrackLabels](#showFeatureTrackLabels) | Boolean | Show compact feature-track names when the map is zoomed in [Default: true]
  * [showBorder](#showBorder)           | Boolean   | Should a border be drawn on the features [Default: true]
  * [borderColor](#borderColor)         | String    | A string describing the border color of features [Default: 'rgba(0,0,0,1)']. See {@link Color} for details.
  * [borderThickness](#borderThickness) | Number    | The width of the border drawn on features in pixels [Default: 1.5]
@@ -71,6 +72,7 @@ class Settings {
     this.arrowHeadLength = utils.defaultFor(options.arrowHeadLength, 0.3);
     this._showShading = utils.defaultFor(options.showShading, true);
     this._showFeatureDirectionIndicators = utils.defaultFor(options.showFeatureDirectionIndicators, false);
+    this._showFeatureTrackLabels = utils.defaultFor(options.showFeatureTrackLabels, true);
     this._showBorder = utils.defaultFor(options.showBorder, false);
     this._borderColor = new Color( utils.defaultFor(options.borderColor, 'rgba(0,0,0,1)') );
     this._borderThickness = utils.defaultFor(options.borderThickness, 1.5);
@@ -172,6 +174,26 @@ class Settings {
   }
 
   /**
+   * @member {Boolean} - Get or set whether compact feature-track names are
+   * shown after the map has been zoomed far enough to read individual lanes
+   * (Default: true).
+   */
+  get showFeatureTrackLabels() {
+    return this._showFeatureTrackLabels;
+  }
+
+  set showFeatureTrackLabels(value) {
+    const nextValue = Boolean(value);
+    const changed = this._showFeatureTrackLabels !== nextValue;
+    this._showFeatureTrackLabels = nextValue;
+    // At overview scale the labels are intentionally absent, so changing the
+    // preference should not cause a needless map flash.
+    if (changed && this.viewer.layout.featureTrackLabelsAtCurrentZoom()) {
+      this.viewer.drawFull();
+    }
+  }
+
+  /**
    * @member {Boolean} - Get or set whether features should be drawn with a border (Default: true).
    */
   get showBorder() {
@@ -261,7 +283,7 @@ class Settings {
   update(attributes) {
     this.viewer.updateRecords(this, attributes, {
       recordClass: 'Settings',
-      validKeys: ['format', 'backgroundColor', 'showShading', 'showFeatureDirectionIndicators', 'showBorder', 'borderColor', 'borderThickness', 'arrowHeadLength', 'geneticCode', 'initialMapThicknessProportion', 'maxMapThicknessProportion', 'maxSlotThickness']
+      validKeys: ['format', 'backgroundColor', 'showShading', 'showFeatureDirectionIndicators', 'showFeatureTrackLabels', 'showBorder', 'borderColor', 'borderThickness', 'arrowHeadLength', 'geneticCode', 'initialMapThicknessProportion', 'maxMapThicknessProportion', 'maxSlotThickness']
     });
     this.viewer.trigger('settings-update', { attributes });
   }
@@ -276,6 +298,7 @@ class Settings {
       backgroundColor: this.backgroundColor.rgbaString,
       showShading: this.showShading,
       showFeatureDirectionIndicators: this.showFeatureDirectionIndicators,
+      showFeatureTrackLabels: this.showFeatureTrackLabels,
       showBorder: this.showBorder,
       borderColor: this.borderColor.rgbaString,
       borderThickness: this.borderThickness,

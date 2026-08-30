@@ -23,6 +23,7 @@
 
 import LayoutCircular from './LayoutCircular';
 import LayoutLinear from './LayoutLinear';
+import TrackLabelRenderer from './TrackLabelRenderer';
 import utils from './Utils';
 import * as d3 from 'd3';
 
@@ -61,6 +62,7 @@ class Layout {
     this._initialMapThicknessProportion = 0.1;
     this._proportionUpdateDepth = 0;
     this._proportionUpdatePending = false;
+    this._trackLabelRenderer = new TrackLabelRenderer(this);
 
     // Setup scales
     this._scale = {};
@@ -104,6 +106,15 @@ class Layout {
    */
   get sequence() {
     return this.viewer.sequence;
+  }
+
+  /**
+   * Return whether feature-track names could currently be visible. Settings
+   * uses this to avoid redraws when the option changes at overview scale.
+   * @private
+   */
+  featureTrackLabelsAtCurrentZoom() {
+    return this._trackLabelRenderer.isAtLabelZoom();
   }
 
   /** * @member {Backbone} - Get the *Backbone*
@@ -984,6 +995,9 @@ class Layout {
   drawForeground() {
     const viewer = this.viewer;
     viewer.clear('foreground');
+    // Compact feature-track identifiers sit above map data but below captions
+    // and legends, so those established foreground elements retain priority.
+    this._trackLabelRenderer.draw();
     // Draw center line for current bp
     viewer.centerLine.draw();
     // Captions positioned on the Map
