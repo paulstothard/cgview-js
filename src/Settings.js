@@ -48,6 +48,7 @@ import utils from './Utils';
  * [geneticCode](#geneticCode)         | Number    | NCBI genetic code used for sequence and feature translation [Default: 11]
  * [initialMapThicknessProportion](#initialMapThicknessProportion) | Number  | Proportion of canvas size to use for drawing map tracks at a zoomFactor of 1 [Default: 0.1]
  * [maxMapThicknessProportion](#maxMapThicknessProportion) | Number  | Proportion of canvas size to use for drawing map tracks at max zoom level [Default: 0.5]
+ * [maxSlotThickness](#maxSlotThickness) | Number  | Maximum thickness of an individual feature or plot lane in pixels while zooming [Default: 50]
  *
  * ### Examples
  *
@@ -75,6 +76,7 @@ class Settings {
     this._borderThickness = utils.defaultFor(options.borderThickness, 1.5);
     this.initialMapThicknessProportion = utils.defaultFor(options.initialMapThicknessProportion, 0.1);
     this.maxMapThicknessProportion = utils.defaultFor(options.maxMapThicknessProportion, 0.5);
+    this.maxSlotThickness = utils.defaultFor(options.maxSlotThickness, 50);
     this.viewer.trigger('settings-update', {attributes: this.toJSON({includeDefaults: true})});
   }
 
@@ -239,6 +241,19 @@ class Settings {
   }
 
   /**
+   * @member {Number} - Get or set the maximum thickness of an individual
+   * feature or plot lane in pixels as the map grows while zooming (Default: 50).
+   * Track thickness ratios still determine how the available space is shared.
+   */
+  get maxSlotThickness() {
+    return this.viewer.layout.maxSlotThickness;
+  }
+
+  set maxSlotThickness(value) {
+    this.viewer.layout.maxSlotThickness = value;
+  }
+
+  /**
    * Update settings [attributes](#attributes).
    * See [updating records](../docs.html#s.updating-records) for details.
    * @param {Object} attributes - Object describing the properties to change
@@ -246,7 +261,7 @@ class Settings {
   update(attributes) {
     this.viewer.updateRecords(this, attributes, {
       recordClass: 'Settings',
-      validKeys: ['format', 'backgroundColor', 'showShading', 'showFeatureDirectionIndicators', 'showBorder', 'borderColor', 'borderThickness', 'arrowHeadLength', 'geneticCode', 'initialMapThicknessProportion', 'maxMapThicknessProportion']
+      validKeys: ['format', 'backgroundColor', 'showShading', 'showFeatureDirectionIndicators', 'showBorder', 'borderColor', 'borderThickness', 'arrowHeadLength', 'geneticCode', 'initialMapThicknessProportion', 'maxMapThicknessProportion', 'maxSlotThickness']
     });
     this.viewer.trigger('settings-update', { attributes });
   }
@@ -266,7 +281,8 @@ class Settings {
       borderThickness: this.borderThickness,
       arrowHeadLength: this.arrowHeadLength,
       initialMapThicknessProportion: this.initialMapThicknessProportion,
-      maxMapThicknessProportion: this.maxMapThicknessProportion
+      maxMapThicknessProportion: this.maxMapThicknessProportion,
+      maxSlotThickness: this.maxSlotThickness
     };
   }
 

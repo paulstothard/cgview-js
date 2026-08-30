@@ -84,7 +84,8 @@ class Track extends CGObject {
     this.dataKeys = data.dataKeys;
     this.dataOptions = data.dataOptions || {};
     this.position = utils.defaultFor(data.position, 'around');
-    this._thicknessRatio = utils.defaultFor(data.thicknessRatio, 1);
+    const thicknessRatio = Number(utils.defaultFor(data.thicknessRatio, 1));
+    this._thicknessRatio = Number.isFinite(thicknessRatio) && thicknessRatio > 0 ? thicknessRatio : 1;
     this._loadProgress = 0;
     this.refresh();
   }
@@ -315,8 +316,14 @@ class Track extends CGObject {
   }
 
   set thicknessRatio(value) {
-    this._thicknessRatio = Number(value);
-    this.layout._adjustProportions();
+    const thicknessRatio = Number(value);
+    if (!Number.isFinite(thicknessRatio) || thicknessRatio <= 0 || thicknessRatio === this._thicknessRatio) {
+      return;
+    }
+    this._thicknessRatio = thicknessRatio;
+    // Thickness is commonly controlled by a live slider. Recalculate atomically
+    // so successive input events do not queue map-recentering animations.
+    this.layout._adjustProportions({duration: 0});
   }
 
   /**
@@ -620,5 +627,4 @@ class Track extends CGObject {
 }
 
 export default Track;
-
 

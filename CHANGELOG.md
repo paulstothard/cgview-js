@@ -24,6 +24,7 @@
 - Kept backbone edge shading visually thin when sequence and translation detail expand the backbone.
 - Added on-demand amino-acid popovers with codon, position, frame, start/stop, and genetic-code details.
 - Defaulted missing zoom-detail settings on the test page to six-frame translation, curved ruler labels, and inline labels with external fallback.
+- Added configurable per-track thickness ratios, overview map width, zoomed map width, and a serialized per-lane pixel cap for feature and plot sizing.
 
 
 ## 1.8.2 - 2026-05-04 - Paper Release

@@ -52,9 +52,8 @@ class Layout {
 
     // _fastMaxFeatures is the maximum number of features allowed to be drawn in fast mode.
     this._fastMaxFeatures = 1000;
-    // FIXME: move to settings
-    // this._minSlotThickness = CGV.defaultFor(data.minSlotThickness, 1);
-    // this._maxSlotThickness = CGV.defaultFor(data.maxSlotThickness, 50);
+    // The maximum is exposed through Settings; the minimum remains an internal
+    // readability safeguard.
     this._minSlotThickness = 1;
     this._maxSlotThickness = 50;
     // Default values. These will be overridden by the values in Settings.
@@ -808,8 +807,12 @@ class Layout {
   }
 
   set maxSlotThickness(value) {
-    this._maxSlotThickness = Number(value);
-    this._adjustProportions();
+    const maxSlotThickness = Number(value);
+    if (!Number.isFinite(maxSlotThickness) || maxSlotThickness < this.minSlotThickness || maxSlotThickness === this._maxSlotThickness) {
+      return;
+    }
+    this._maxSlotThickness = maxSlotThickness;
+    this._adjustProportions({duration: 0});
   }
 
   /**
@@ -834,8 +837,12 @@ class Layout {
   }
 
   set initialMapThicknessProportion(value) {
-    this._initialMapThicknessProportion = Number(value);
-    this._adjustProportions();
+    const proportion = Number(value);
+    if (!Number.isFinite(proportion) || proportion <= 0 || proportion === this._initialMapThicknessProportion) {
+      return;
+    }
+    this._initialMapThicknessProportion = proportion;
+    this._adjustProportions({duration: 0});
   }
 
   /**
@@ -847,8 +854,12 @@ class Layout {
   }
 
   set maxMapThicknessProportion(value) {
-    this._maxMapThicknessProportion = Number(value);
-    this._adjustProportions();
+    const proportion = Number(value);
+    if (!Number.isFinite(proportion) || proportion <= 0 || proportion === this._maxMapThicknessProportion) {
+      return;
+    }
+    this._maxMapThicknessProportion = proportion;
+    this._adjustProportions({duration: 0});
   }
 
   // Draw everything but the slots and their features.
@@ -1166,4 +1177,3 @@ class Layout {
 }
 
 export default Layout;
-
