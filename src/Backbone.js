@@ -239,6 +239,16 @@ class Backbone extends CGObject {
   }
 
   /**
+   * Width of each shaded backbone edge in screen pixels. Sequence letters and
+   * translation lanes expand the backbone's drawing surface at high zoom, but
+   * they must not also enlarge its decorative edge shading.
+   * @private
+   */
+  get shadingWidth() {
+    return Math.min(this.viewer.zoomFactor, 4) * this.thickness * 0.10;
+  }
+
+  /**
    * @member {Number} - Maximum thickness the backbone should become to allow viewing of the sequence
    */
   get maxThickness() {
@@ -319,7 +329,7 @@ class Backbone extends CGObject {
         const contigs = this.sequence.contigsForMapRange(this.visibleRange);
         if (fast && contigs.length > this._maxContigsForFastDraw) {
           // Use fast drawing method when too many contigs
-          this.viewer.canvas.drawElement({layer: 'map', start: this.visibleRange.start, stop: this.visibleRange.stop, centerOffset: this.adjustedCenterOffset, color: this.color.rgbaString, width: this.adjustedThickness, decoration: this.directionalDecorationForContig(this.sequence.mapContig), showShading: this.showShading, showBorder: this.showBorder});
+          this.viewer.canvas.drawElement({layer: 'map', start: this.visibleRange.start, stop: this.visibleRange.stop, centerOffset: this.adjustedCenterOffset, color: this.color.rgbaString, width: this.adjustedThickness, decoration: this.directionalDecorationForContig(this.sequence.mapContig), showShading: this.showShading, shadingWidth: this.shadingWidth, showBorder: this.showBorder});
           return;
         }
         for (let i = 0, len = contigs.length; i < len; i++) {
@@ -336,14 +346,14 @@ class Backbone extends CGObject {
             stop = this.visibleRange.stop;
           }
           const color = this.colorForContig(contig);
-          this.viewer.canvas.drawElement({layer: 'map', start, stop, centerOffset: this.adjustedCenterOffset, color: color.rgbaString, width: this.adjustedThickness, decoration: this.directionalDecorationForContig(contig), showShading: this.showShading, showBorder: this.showBorder});
+          this.viewer.canvas.drawElement({layer: 'map', start, stop, centerOffset: this.adjustedCenterOffset, color: color.rgbaString, width: this.adjustedThickness, decoration: this.directionalDecorationForContig(contig), showShading: this.showShading, shadingWidth: this.shadingWidth, showBorder: this.showBorder});
         }
       } else {
         if (this.visibleRange.isWrapped() && this.decoration === 'arrow') {
-          this.viewer.canvas.drawElement({layer: 'map', start: this.visibleRange.start, stop: this.sequence.length, centerOffset: this.adjustedCenterOffset, color: this.color.rgbaString, width: this.adjustedThickness, decoration: this.directionalDecorationForContig(this.sequence.mapContig), showShading: this.showShading, showBorder: this.showBorder});
-          this.viewer.canvas.drawElement({layer: 'map', start: 1, stop: this.visibleRange.stop, centerOffset: this.adjustedCenterOffset, color: this.color.rgbaString, width: this.adjustedThickness, decoration: this.directionalDecorationForContig(this.sequence.mapContig), showShading: this.showShading, showBorder: this.showBorder});
+          this.viewer.canvas.drawElement({layer: 'map', start: this.visibleRange.start, stop: this.sequence.length, centerOffset: this.adjustedCenterOffset, color: this.color.rgbaString, width: this.adjustedThickness, decoration: this.directionalDecorationForContig(this.sequence.mapContig), showShading: this.showShading, shadingWidth: this.shadingWidth, showBorder: this.showBorder});
+          this.viewer.canvas.drawElement({layer: 'map', start: 1, stop: this.visibleRange.stop, centerOffset: this.adjustedCenterOffset, color: this.color.rgbaString, width: this.adjustedThickness, decoration: this.directionalDecorationForContig(this.sequence.mapContig), showShading: this.showShading, shadingWidth: this.shadingWidth, showBorder: this.showBorder});
         } else {
-          this.viewer.canvas.drawElement({layer: 'map', start: this.visibleRange.start, stop: this.visibleRange.stop, centerOffset: this.adjustedCenterOffset, color: this.color.rgbaString, width: this.adjustedThickness, decoration: this.directionalDecorationForContig(this.sequence.mapContig), showShading: this.showShading, showBorder: this.showBorder});
+          this.viewer.canvas.drawElement({layer: 'map', start: this.visibleRange.start, stop: this.visibleRange.stop, centerOffset: this.adjustedCenterOffset, color: this.color.rgbaString, width: this.adjustedThickness, decoration: this.directionalDecorationForContig(this.sequence.mapContig), showShading: this.showShading, shadingWidth: this.shadingWidth, showBorder: this.showBorder});
         }
       }
 

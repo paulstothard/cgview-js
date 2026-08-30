@@ -124,6 +124,19 @@ describe('SequenceTranslation', () => {
     }
   });
 
+  test('does not enlarge backbone edge shading with translation detail', () => {
+    const cgv = new Viewer('#map', {
+      sequence: {seq: 'ATGAAATAACCC', translation: {visible: true}},
+    });
+    cgv._zoomFactor = 4;
+    jest.spyOn(cgv.backbone, 'pixelsPerBp').mockReturnValue(17);
+    cgv.backbone.refreshThickness();
+
+    expect(cgv.backbone.shadingWidth).toBeCloseTo(2);
+    expect(cgv.backbone.adjustedThickness).toBeGreaterThan(100);
+    expect(cgv.backbone.shadingWidth).toBeLessThan(cgv.backbone.adjustedThickness * 0.02);
+  });
+
   test('translates all direct frames from the map origin', () => {
     const cgv = new Viewer('#map', {
       sequence: {seq: 'ATGAAATAACCC', translation: {visible: true}},

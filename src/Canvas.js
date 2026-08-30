@@ -257,6 +257,8 @@ class Canvas {
    *   Values: 'arc', 'clockwise-arrow', 'counterclockwise-arrow', 'none'
    * @param {Boolean} [options.showShading] - Should the element be drawn with shading
    *   [Default: value from settings {@link Settings#showShading}]
+   * @param {Number} [options.shadingWidth] - Width of each shaded edge in
+   *   screen pixels. When omitted, each edge occupies 10% of the element.
    * @param {Boolean} [options.showBorder] - Should the element be drawn with a border
    *   [Default: value from settings {@link Settings#showBorder}]
    * @param {String} [options.borderColor] - Border color
@@ -310,6 +312,7 @@ class Canvas {
       width = 1,
       decoration = 'arc',
       showShading = settings.showShading,
+      shadingWidth,
       showBorder = settings.showBorder,
       borderColor = settings.borderColor.rgbaString,
       borderThickness,
@@ -330,6 +333,10 @@ class Canvas {
     // Shading settings
     const shadowFraction = 0.10;
     const shadowColorDiff = 0.15;
+    const shadowWidth = Math.min(
+      width / 2,
+      Math.max(0, Number(utils.defaultFor(shadingWidth, width * shadowFraction)) || 0)
+    );
 
     // Border settings
     let borderWidth = borderThickness === undefined ?
@@ -377,8 +384,7 @@ class Canvas {
         return;
       }
 
-      if (showShading && !fast) {
-        const shadowWidth = width * shadowFraction;
+      if (showShading && !fast && shadowWidth > 0) {
         // Main Arc
         const mainWidth = width - (2 * shadowWidth);
         ctx.beginPath();
@@ -477,8 +483,8 @@ class Canvas {
         innerArcStartPt = this.pointForBp(arcStopBp, centerOffset - halfWidth);
       }
 
-      if (showShading && !fast) {
-        const halfMainWidth =  width * (0.5 - shadowFraction);
+      if (showShading && !fast && shadowWidth > 0) {
+        const halfMainWidth = (width / 2) - shadowWidth;
         const shadowPt = this.pointForBp(arcStopBp, centerOffset - halfMainWidth);
 
         // Main Arrow
