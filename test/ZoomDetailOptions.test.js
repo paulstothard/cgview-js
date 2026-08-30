@@ -35,7 +35,7 @@ describe('Zoom detail options', () => {
       sequence: {length: 1000},
       annotation: {
         font: 'sans-serif, plain, 16',
-        drawInlineLabels: true,
+        labelPosition: 'inline',
         inlineLabelMinZoomFactor: 2,
         inlineLabelMinFontSize: 8,
       },
@@ -57,7 +57,7 @@ describe('Zoom detail options', () => {
       sequence: {length: 1000},
       annotation: {
         font: 'sans-serif, plain, 14',
-        drawInlineLabels: true,
+        labelPosition: 'inline',
         inlineLabelMinFontSize: 8,
       },
       features: [{name: 'overview label', source: 'test', start: 100, stop: 500, legend: 'Feature'}],
@@ -92,7 +92,7 @@ describe('Zoom detail options', () => {
       width: 800,
       height: 600,
       sequence: {length: 1000},
-      annotation: {font: 'sans-serif, plain, 14', drawInlineLabels: true},
+      annotation: {font: 'sans-serif, plain, 14', labelPosition: 'inline'},
       features: [{name: 'curved label', source: 'test', start: 400, stop: 600, legend: 'Feature'}],
     });
     const feature = cgv.features(1);
@@ -120,7 +120,7 @@ describe('Zoom detail options', () => {
       width: 800,
       height: 600,
       sequence: {length: 1000},
-      annotation: {font: 'sans-serif, plain, 14', drawInlineLabels: true},
+      annotation: {font: 'sans-serif, plain, 14', labelPosition: 'inline'},
       features: [{name: 'straight label', source: 'test', start: 300, stop: 700, legend: 'Feature'}],
     });
     cgv.format = 'linear';
@@ -140,7 +140,7 @@ describe('Zoom detail options', () => {
   test('omits inline labels when the feature or zoom level cannot accommodate them', () => {
     const cgv = new Viewer('#map', {
       sequence: {length: 1000},
-      annotation: {drawInlineLabels: true, inlineLabelMinZoomFactor: 5, inlineLabelMinFontSize: 8},
+      annotation: {labelPosition: 'inline', inlineLabelMinZoomFactor: 5, inlineLabelMinFontSize: 8},
       features: [{name: 'label that cannot fit', source: 'test', start: 100, stop: 102, legend: 'Feature'}],
     });
     const feature = cgv.features(1);
@@ -159,7 +159,7 @@ describe('Zoom detail options', () => {
       sequence: {length: 1000},
       annotation: {
         font: 'sans-serif, plain, 16',
-        drawInlineLabels: true,
+        labelPosition: 'inline',
         inlineLabelAllowShrinking: false,
         inlineLabelAllowTruncation: false,
         inlineLabelMinFontSize: 8,
@@ -186,7 +186,7 @@ describe('Zoom detail options', () => {
       sequence: {length: 1000},
       annotation: {
         font: 'sans-serif, plain, 14',
-        drawInlineLabels: true,
+        labelPosition: 'inline',
         inlineLabelAllowShrinking: false,
         inlineLabelAllowTruncation: true,
       },
@@ -215,7 +215,7 @@ describe('Zoom detail options', () => {
       width: 800,
       height: 600,
       sequence: {length: 1000},
-      annotation: {drawExternalLabels: true, drawInlineLabels: true},
+      annotation: {labelPosition: 'both'},
       features: [
         {name: 'fits inline', source: 'test', start: 100, stop: 300, legend: 'Feature'},
         {name: 'needs fallback', source: 'test', start: 500, stop: 600, legend: 'Feature'},
@@ -232,10 +232,34 @@ describe('Zoom detail options', () => {
     expect(cgv.annotation._visibleLabels.map(label => label.feature.name)).not.toContain('fits inline');
   });
 
+  test('applies onlyDrawFavorites to inline labels', () => {
+    const cgv = new Viewer('#map', {
+      width: 800,
+      height: 600,
+      sequence: {length: 1000},
+      annotation: {labelPosition: 'inline', onlyDrawFavorites: true},
+      features: [
+        {name: 'favorite label', source: 'test', start: 100, stop: 300, favorite: true, legend: 'Feature'},
+        {name: 'ordinary label', source: 'test', start: 500, stop: 700, legend: 'Feature'},
+      ],
+    });
+    const renderer = cgv.annotation._featureLabelRenderer;
+    const drawStraightLabel = jest.spyOn(renderer, '_drawStraightLabel').mockImplementation(() => {});
+    const visibleRange = new CGRange(cgv.sequence.mapContig, 1, 1000);
+    cgv.format = 'linear';
+    jest.spyOn(renderer, 'metricsFor').mockImplementation(feature => ({feature}));
+
+    renderer.draw(cgv.features(), 0, 20, visibleRange);
+
+    expect(drawStraightLabel).toHaveBeenCalledTimes(1);
+    expect(drawStraightLabel.mock.calls[0][1].name).toBe('favorite label');
+    expect(renderer.willDrawFeature(cgv.features(2))).toBe(false);
+  });
+
   test('rejects obviously short overview features before segment layout work', () => {
     const cgv = new Viewer('#map', {
       sequence: {length: 1000000},
-      annotation: {drawInlineLabels: true, inlineLabelMinFontSize: 8},
+      annotation: {labelPosition: 'inline', inlineLabelMinFontSize: 8},
       features: [{name: 'label that is much too long', source: 'test', start: 100, stop: 110, legend: 'Feature'}],
     });
     const feature = cgv.features(1);
@@ -251,7 +275,7 @@ describe('Zoom detail options', () => {
   test('uses continuous label space for a feature wrapping the circular origin', () => {
     const cgv = new Viewer('#map', {
       sequence: {length: 1000},
-      annotation: {font: 'sans-serif, plain, 14', drawInlineLabels: true, inlineLabelMinZoomFactor: 2},
+      annotation: {font: 'sans-serif, plain, 14', labelPosition: 'inline', inlineLabelMinZoomFactor: 2},
       features: [{name: 'origin feature', source: 'test', start: 900, stop: 100, legend: 'Feature'}],
     });
     const feature = cgv.features(1);
@@ -264,21 +288,44 @@ describe('Zoom detail options', () => {
     expect(metrics.bp).toBeCloseTo(1000);
   });
 
-  test('serializes independent placement and inline fitting switches', () => {
+  test('serializes canonical placement and independent inline fitting switches', () => {
     const cgv = new Viewer('#map', {
       annotation: {
-        drawExternalLabels: false,
-        drawInlineLabels: true,
+        labelPosition: 'inline',
         inlineLabelAllowShrinking: false,
         inlineLabelAllowTruncation: true,
         inlineLabelPadding: 3,
       },
     });
     const json = cgv.annotation.toJSON();
-    expect(json.drawExternalLabels).toBe(false);
-    expect(json.drawInlineLabels).toBe(true);
+    expect(json.labelPosition).toBe('inline');
+    expect(json.drawExternalLabels).toBeUndefined();
+    expect(json.drawInlineLabels).toBeUndefined();
     expect(json.inlineLabelAllowShrinking).toBe(false);
     expect(json.inlineLabelAllowTruncation).toBe(true);
     expect(json.inlineLabelPadding).toBe(3);
+  });
+
+  test('normalizes temporary placement booleans when loading annotation options', () => {
+    const cgv = new Viewer('#map', {
+      annotation: {drawExternalLabels: true, drawInlineLabels: true},
+    });
+
+    expect(cgv.annotation.labelPosition).toBe('both');
+    expect(cgv.annotation.toJSON().labelPosition).toBe('both');
+    expect(cgv.annotation.toJSON().drawExternalLabels).toBeUndefined();
+    expect(cgv.annotation.toJSON().drawInlineLabels).toBeUndefined();
+  });
+
+  test('uses canonical labelPosition when temporary placement booleans are also present', () => {
+    const cgv = new Viewer('#map', {
+      annotation: {
+        labelPosition: 'none',
+        drawExternalLabels: true,
+        drawInlineLabels: true,
+      },
+    });
+
+    expect(cgv.annotation.labelPosition).toBe('none');
   });
 });

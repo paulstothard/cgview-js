@@ -48,8 +48,7 @@ describe('IO', () => {
       expect(cgv.sequence.translation.visible).toBe(false);
       expect(cgv.ruler.labelPosition).toBe('inner');
       expect(cgv.ruler.labelStyle).toBe('default');
-      expect(cgv.annotation.drawExternalLabels).toBe(true);
-      expect(cgv.annotation.drawInlineLabels).toBe(false);
+      expect(cgv.annotation.labelPosition).toBe('external');
       expect(cgv.annotation.inlineLabelAllowShrinking).toBe(true);
       expect(cgv.annotation.inlineLabelAllowTruncation).toBe(false);
       expect(cgv.annotation.inlineLabelMinZoomFactor).toBe(1);
@@ -114,8 +113,7 @@ describe('IO', () => {
             spacing: 4,
           },
           annotation: {
-            drawExternalLabels: false,
-            drawInlineLabels: true,
+            labelPosition: 'inline',
             inlineLabelAllowShrinking: false,
             inlineLabelAllowTruncation: true,
             inlineLabelMinZoomFactor: 3,
@@ -140,8 +138,7 @@ describe('IO', () => {
       expect(secondViewer.sequence.translation.highlightStopCodons).toBe(true);
       expect(secondViewer.ruler.labelPosition).toBe('outer');
       expect(secondViewer.ruler.labelStyle).toBe('tangential');
-      expect(secondViewer.annotation.drawExternalLabels).toBe(false);
-      expect(secondViewer.annotation.drawInlineLabels).toBe(true);
+      expect(secondViewer.annotation.labelPosition).toBe('inline');
       expect(secondViewer.annotation.inlineLabelAllowShrinking).toBe(false);
       expect(secondViewer.annotation.inlineLabelAllowTruncation).toBe(true);
     });

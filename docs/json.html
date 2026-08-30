@@ -105,11 +105,11 @@ settings are preserved by
 The six protein sequences are not stored in the viewer. Translation is computed
 on demand only for codons intersecting the visible base-pair-detail window.
 Inline feature labels are fit-tested at every zoom level by default; set
-`inlineLabelMinZoomFactor` above 1 to delay them deliberately. With both
-`drawInlineLabels` and `drawExternalLabels` enabled, labels that fit inside
-features are drawn inline and the remainder use external labels. Enable or
-disable inline shrinking and ellipsis truncation independently with
-`inlineLabelAllowShrinking` and `inlineLabelAllowTruncation`.
+`inlineLabelMinZoomFactor` above 1 to delay them deliberately. Set annotation
+`labelPosition` to `external`, `inline`, `both`, or `none`. With `both`, labels
+that fit inside features are drawn inline and the remainder use external
+labels. Enable or disable inline shrinking and ellipsis truncation independently
+with `inlineLabelAllowShrinking` and `inlineLabelAllowTruncation`.
 
 ```json
 {
@@ -144,8 +144,7 @@ disable inline shrinking and ellipsis truncation independently with
         },
         "annotation": {
             "font": "sans-serif,plain,12",
-            "drawExternalLabels": false,
-            "drawInlineLabels": true,
+            "labelPosition": "inline",
             "inlineLabelAllowShrinking": true,
             "inlineLabelAllowTruncation": false,
             "inlineLabelMinZoomFactor": 1,

@@ -304,10 +304,11 @@ class FeatureLabelRenderer {
   }
 
   draw(features, centerOffset, slotThickness, visibleRange) {
-    if (!this.annotation.drawInlineLabels) { return; }
+    if (!['inline', 'both'].includes(this.annotation.labelPosition)) { return; }
     const ctx = this.canvas.context('map');
     ctx.save();
     for (const feature of features) {
+      if (this.annotation.onlyDrawFavorites && !feature.favorite) { continue; }
       const metrics = this.metricsFor(feature, centerOffset, slotThickness, visibleRange);
       if (!metrics) { continue; }
       if (this.viewer.format === 'circular') {
@@ -325,7 +326,8 @@ class FeatureLabelRenderer {
    * @private
    */
   willDrawFeature(feature) {
-    if (!this.annotation.drawInlineLabels) { return false; }
+    if (!['inline', 'both'].includes(this.annotation.labelPosition)) { return false; }
+    if (this.annotation.onlyDrawFavorites && !feature.favorite) { return false; }
     for (const slot of feature.slots()) {
       if (!slot.visible || !slot.track.visible || slot.thickness <= 0) { continue; }
       const visibleRange = this.canvas.visibleRangeForCenterOffset(slot.centerOffset, {margin: slot.thickness});

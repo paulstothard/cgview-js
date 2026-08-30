@@ -310,17 +310,11 @@ const geneticCodeOptions = Object.entries(cgv.codonTables.names()).map(([id, nam
 );
 geneticCodeSelect.innerHTML = geneticCodeOptions.join('\n');
 
-function featureLabelMode() {
-  if (cgv.annotation.drawInlineLabels && cgv.annotation.drawExternalLabels) return 'mixed';
-  if (cgv.annotation.drawInlineLabels) return 'inline';
-  if (cgv.annotation.drawExternalLabels) return 'external';
-  return 'none';
-}
-
 function syncZoomDetailControls() {
+  const inlineLabelsEnabled = ['inline', 'both'].includes(cgv.annotation.labelPosition);
   translationsCheckbox.checked = cgv.sequence.translation.visible;
   tangentialRulerCheckbox.checked = cgv.ruler.labelPosition === 'outer' && cgv.ruler.labelStyle === 'tangential';
-  featureLabelModeSelect.value = featureLabelMode();
+  featureLabelModeSelect.value = cgv.annotation.labelPosition;
   shrinkInlineLabelsCheckbox.checked = cgv.annotation.inlineLabelAllowShrinking;
   truncateInlineLabelsCheckbox.checked = cgv.annotation.inlineLabelAllowTruncation;
   highlightStartsCheckbox.checked = cgv.sequence.translation.highlightStartCodons;
@@ -329,9 +323,9 @@ function syncZoomDetailControls() {
   stopColorInput.value = `#${cgv.sequence.translation.stopColor.hex}`;
   geneticCodeSelect.value = String(cgv.geneticCode);
   inlineLabelMinFont.value = cgv.annotation.inlineLabelMinFontSize;
-  inlineLabelMinFont.disabled = !cgv.annotation.drawInlineLabels || !cgv.annotation.inlineLabelAllowShrinking;
-  shrinkInlineLabelsCheckbox.disabled = !cgv.annotation.drawInlineLabels;
-  truncateInlineLabelsCheckbox.disabled = !cgv.annotation.drawInlineLabels;
+  inlineLabelMinFont.disabled = !inlineLabelsEnabled || !cgv.annotation.inlineLabelAllowShrinking;
+  shrinkInlineLabelsCheckbox.disabled = !inlineLabelsEnabled;
+  truncateInlineLabelsCheckbox.disabled = !inlineLabelsEnabled;
 }
 
 cgv.on('sequence-translation-update.zoom-detail-controls', () => {
@@ -360,11 +354,7 @@ tangentialRulerCheckbox.addEventListener('change', (e) => {
 });
 
 featureLabelModeSelect.addEventListener('change', (e) => {
-  const mode = e.target.value;
-  cgv.annotation.update({
-    drawInlineLabels: mode === 'inline' || mode === 'mixed',
-    drawExternalLabels: mode === 'external' || mode === 'mixed',
-  });
+  cgv.annotation.update({labelPosition: e.target.value});
   cgv.draw();
 });
 

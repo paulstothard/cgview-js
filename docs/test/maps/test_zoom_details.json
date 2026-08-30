@@ -25,8 +25,7 @@
     },
     "annotation": {
       "font": "sans-serif,bold,13",
-      "drawExternalLabels": false,
-      "drawInlineLabels": true,
+      "labelPosition": "inline",
       "inlineLabelAllowShrinking": true,
       "inlineLabelAllowTruncation": false,
       "inlineLabelMinZoomFactor": 1,

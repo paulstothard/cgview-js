@@ -49,8 +49,7 @@ import FeatureLabelRenderer from './FeatureLabelRenderer';
  * [color](#color)                  | String   | A string describing the color [Default: undefined]. If the color is undefined, the legend color for the feature will be used. See {@link Color} for details.
  * [onlyDrawFavorites](#onlyDrawFavorites) | Boolean   | Only draw labels for features that are favorited [Default: false]
  * [labelPlacement](#labelPlacement) | String   | The label placement method for positioning labels. Choices: 'default', 'angled' [Default: 'default']
- * [drawExternalLabels](#drawExternalLabels) | Boolean | Draw labels outside the map. When inline labels are also enabled, external labels are used only as fallbacks [Default: true]
- * [drawInlineLabels](#drawInlineLabels) | Boolean | Draw labels inside features whenever space permits [Default: false]
+ * [labelPosition](#labelPosition) | String | Where feature labels are drawn. Choices: 'external', 'inline', 'both', 'none'. With 'both', external labels are fallbacks for labels that do not fit inline [Default: 'external']
  * [inlineLabelAllowShrinking](#inlineLabelAllowShrinking) | Boolean | Shrink inline labels down to the configured minimum font size [Default: true]
  * [inlineLabelAllowTruncation](#inlineLabelAllowTruncation) | Boolean | Truncate inline labels with an ellipsis when the full name cannot fit [Default: false]
  * [inlineLabelMinZoomFactor](#inlineLabelMinZoomFactor) | Number | Optional minimum zoom factor for inline labels [Default: 1]
@@ -59,11 +58,6 @@ import FeatureLabelRenderer from './FeatureLabelRenderer';
  * [inlineLabelColor](#inlineLabelColor) | String | Inline-label color. When omitted, black or white is chosen for contrast.
  * [visible](CGObject.html#visible) | Boolean   | Labels are visible [Default: true]
  * [meta](CGObject.html#meta)       | Object    | [Meta data](tutorial-meta.html) for Annotation
- *
- * The external and inline switches combine into four label modes:
- * `drawExternalLabels` alone draws external labels, `drawInlineLabels` alone
- * draws inline labels, enabling both uses external labels only as fallbacks,
- * and disabling both hides feature labels.
  *
  * ### Examples
  * ```js
@@ -81,8 +75,7 @@ import FeatureLabelRenderer from './FeatureLabelRenderer';
  *
  * // Use inline labels where possible and external labels as fallbacks.
  * cgv.annotation.update({
- *   drawExternalLabels: true,
- *   drawInlineLabels: true,
+ *   labelPosition: 'both',
  *   inlineLabelAllowShrinking: true,
  *   inlineLabelAllowTruncation: true,
  *   inlineLabelMinFontSize: 8
@@ -114,8 +107,14 @@ class Annotation extends CGObject {
     this.lineCap = 'round';
     // this.lineCap = 'butt';
     this.onlyDrawFavorites = utils.defaultFor(options.onlyDrawFavorites, false);
-    this.drawExternalLabels = utils.defaultFor(options.drawExternalLabels, true);
-    this.drawInlineLabels = utils.defaultFor(options.drawInlineLabels, false);
+    // Normalize the initial boolean representation on input. labelPosition is
+    // the canonical runtime and serialized representation.
+    const legacyDrawExternal = utils.defaultFor(options.drawExternalLabels, true);
+    const legacyDrawInline = utils.defaultFor(options.drawInlineLabels, false);
+    const legacyLabelPosition = legacyDrawInline ?
+      (legacyDrawExternal ? 'both' : 'inline') :
+      (legacyDrawExternal ? 'external' : 'none');
+    this.labelPosition = utils.defaultFor(options.labelPosition, legacyLabelPosition);
     this.inlineLabelAllowShrinking = utils.defaultFor(options.inlineLabelAllowShrinking, true);
     this.inlineLabelAllowTruncation = utils.defaultFor(options.inlineLabelAllowTruncation, false);
     this.inlineLabelMinZoomFactor = utils.defaultFor(options.inlineLabelMinZoomFactor, 1);
@@ -216,20 +215,17 @@ class Annotation extends CGObject {
     return this._inlineLabelColor;
   }
 
-  get drawExternalLabels() {
-    return this._drawExternalLabels;
+  /**
+   * @member {String} - Where feature labels are drawn: 'external', 'inline',
+   * 'both', or 'none'. In 'both' mode, a label is drawn externally only when
+   * it cannot be drawn inline.
+   */
+  get labelPosition() {
+    return this._labelPosition;
   }
 
-  set drawExternalLabels(value) {
-    this._drawExternalLabels = Boolean(value);
-  }
-
-  get drawInlineLabels() {
-    return this._drawInlineLabels;
-  }
-
-  set drawInlineLabels(value) {
-    this._drawInlineLabels = Boolean(value);
+  set labelPosition(value) {
+    this._labelPosition = ['external', 'inline', 'both', 'none'].includes(value) ? value : 'external';
   }
 
   get inlineLabelAllowShrinking() {
@@ -285,7 +281,7 @@ class Annotation extends CGObject {
    * @private
    */
   drawFeatureLabels(features, centerOffset, slotThickness, visibleRange) {
-    if (!this.visible || !this.drawInlineLabels) { return; }
+    if (!this.visible || !['inline', 'both'].includes(this.labelPosition)) { return; }
     this._featureLabelRenderer.draw(features, centerOffset, slotThickness, visibleRange);
   }
 
@@ -563,7 +559,7 @@ class Annotation extends CGObject {
   }
 
   draw(innerCenterOffset, outerCenterOffset, fast) {
-    if (!this.drawExternalLabels) {
+    if (!['external', 'both'].includes(this.labelPosition)) {
       this._visibleLabels = new CGArray();
       return;
     }
@@ -584,7 +580,7 @@ class Annotation extends CGObject {
 
     // With both label types enabled, inline labels take precedence and
     // external labels become fallbacks for features that cannot fit inline.
-    if (this.drawInlineLabels) {
+    if (this.labelPosition === 'both') {
       possibleLabels = possibleLabels.filter(label => !this._featureLabelRenderer.willDrawFeature(label.feature));
     }
 
@@ -664,7 +660,7 @@ class Annotation extends CGObject {
   update(attributes) {
     this.viewer.updateRecords(this, attributes, {
       recordClass: 'Annotation',
-      validKeys: ['color', 'font', 'onlyDrawFavorites', 'visible', 'labelPlacement', 'drawExternalLabels', 'drawInlineLabels', 'inlineLabelAllowShrinking', 'inlineLabelAllowTruncation', 'inlineLabelMinZoomFactor', 'inlineLabelMinFontSize', 'inlineLabelPadding', 'inlineLabelColor']
+      validKeys: ['color', 'font', 'onlyDrawFavorites', 'visible', 'labelPlacement', 'labelPosition', 'inlineLabelAllowShrinking', 'inlineLabelAllowTruncation', 'inlineLabelMinZoomFactor', 'inlineLabelMinFontSize', 'inlineLabelPadding', 'inlineLabelColor']
     });
     this.viewer.trigger('annotation-update', { attributes });
   }
@@ -677,8 +673,7 @@ class Annotation extends CGObject {
       font: this.font.string,
       color: this.color && this.color.rgbaString,
       onlyDrawFavorites: this.onlyDrawFavorites,
-      drawExternalLabels: this.drawExternalLabels,
-      drawInlineLabels: this.drawInlineLabels,
+      labelPosition: this.labelPosition,
       inlineLabelAllowShrinking: this.inlineLabelAllowShrinking,
       inlineLabelAllowTruncation: this.inlineLabelAllowTruncation,
       inlineLabelMinZoomFactor: this.inlineLabelMinZoomFactor,
