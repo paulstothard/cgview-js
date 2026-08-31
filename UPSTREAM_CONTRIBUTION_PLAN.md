@@ -194,6 +194,9 @@ and proposed boundaries, before implementation branches are prepared.
 
 Upstream design discussion:
 [sciguy/cgview-js#28](https://github.com/sciguy/cgview-js/issues/28).
+The supporting evidence package includes an explicit verification record:
+four focused suites pass all 70 tests, and its circular/linear captures were
+visually inspected.
 
 Development commits:
 
@@ -235,6 +238,8 @@ Important review points:
 
 Prepared discussion package:
 [design evidence and draft](https://github.com/paulstothard/cgview-js/tree/planning/upstream-contributions/design-evidence/inline-labels).
+The package now includes an explicit verification record covering fitting,
+fallback, curved/linear text, contrast, JSON defaults, and Canvas/SVG behavior.
 Keep this queued on the fork until the maintainer has had a reasonable chance
 to respond to sequence-detail issue #28; submitting every enhancement topic at
 once would make review harder and risks obscuring the focused bug-fix PRs.
