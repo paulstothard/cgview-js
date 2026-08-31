@@ -380,6 +380,10 @@ visible compatibility decision.
 
 ### H. Viewer presentation defaults and demo-only polish
 
+The reconciled disposition note for unverified, cross-cutting, and fork-only
+work is available at
+[design-evidence/remaining-dispositions](https://github.com/paulstothard/cgview-js/tree/planning/upstream-contributions/design-evidence/remaining-dispositions).
+
 Development commits:
 
 - `25c3785` — map-aware feature-track controls.
@@ -392,6 +396,11 @@ Development commits:
 These should remain fork-specific unless they directly support an accepted
 feature or Jason requests them. Test-page defaults are not evidence that the
 library should change its defaults.
+
+The ledger below was mechanically reconciled against
+`75afe9a..feature/zoomed-translations-ruler-labels`: 56 commits are present, all
+56 appear exactly once in the table, and there are no extra or duplicate
+hashes.
 
 ## Complete 56-commit ledger
 
