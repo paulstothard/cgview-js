@@ -22,6 +22,28 @@
 CGView.js is a <strong>C</strong>ircular <strong>G</strong>enome <strong>View</strong>ing
 tool for visualizing and interacting with small genomes. 
 
+## About this fork
+
+This is Paul Stothard's public development fork of
+[Jason Grant's CGView.js](https://github.com/sciguy/cgview-js), which remains the
+canonical upstream project. The `development` branch is an integration and
+demonstration branch: it preserves experimental visualization work while each
+upstream contribution is separated into a focused bug fix or design proposal.
+It is not intended to be merged upstream as one large change.
+
+Current experiments include opt-in base-pair sequence detail and six-frame
+translation, feature-label placement, a detailed sequence ruler, subtle
+direction cues, feature-track names and sizing, and pixel-aware plot rendering.
+Existing CGView JSON compatibility, circular/linear behavior, SVG output,
+performance, and downstream [Proksee](https://proksee.ca) integration are being
+evaluated explicitly before those enhancements are proposed upstream.
+
+The upstream contribution work is tracked in
+[UPSTREAM_CONTRIBUTION_PLAN.md](UPSTREAM_CONTRIBUTION_PLAN.md). Small verified
+bug fixes are submitted independently; larger API or rendering changes are
+discussed with the maintainer before clean implementation pull requests are
+prepared.
+
 ## Citing CGView.js
 
 Grant JR and Stothard P  
@@ -71,5 +93,3 @@ See the [tutorials](http://js.cgview.ca/tutorials/index.html) to learn how to ad
 ## License
 
 CGView.js is distributed under the [Apache Version 2.0 License](https://github.com/sciguy/cgview-js/blob/main/LICENSE).
-
-
