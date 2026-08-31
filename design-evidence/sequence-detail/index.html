@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CGView base-pair sequence detail proposal</title>
+  <link rel="stylesheet" href="http://localhost:8767/dist/cgview.css">
+  <style>
+    body { margin: 0; color: #20252b; font-family: system-ui, sans-serif; background: #f4f6f8; }
+    main { width: 1180px; margin: 24px auto; }
+    h1 { margin: 0 0 6px; font-size: 26px; }
+    .intro { margin: 0 0 18px; color: #5b6470; }
+    .card { display: grid; grid-template-columns: 820px 1fr; gap: 22px; padding: 18px; border: 1px solid #d9dee5; border-radius: 12px; background: white; }
+    #viewer { width: 820px; height: 650px; border: 1px solid #e3e7eb; }
+    h2 { margin: 0 0 14px; font-size: 18px; }
+    dl { margin: 0; }
+    dt { margin-top: 16px; font-weight: 700; }
+    dd { margin: 4px 0 0; color: #58626e; line-height: 1.4; }
+    .badge { display: inline-block; margin-top: 18px; padding: 5px 9px; color: #17633a; background: #e6f5eb; border-radius: 999px; font-size: 13px; font-weight: 650; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="http://localhost:8767/dist/cgview.js"></script>
+</head>
+<body>
+  <main>
+    <h1>Opt-in base-pair sequence detail</h1>
+    <p class="intro">Proposed decomposition for CGView.js: sequence glyphs, six reading frames, and genetic-code-aware start/stop styling.</p>
+    <div class="card">
+      <div id="viewer"></div>
+      <aside>
+        <h2 id="layout-title">Circular layout</h2>
+        <dl>
+          <dt>Visible-window translation</dt>
+          <dd>Codons are translated while drawing the visible range; complete protein strings are not retained.</dd>
+          <dt>Stable biological frames</dt>
+          <dd>Direct frames +1 to +3 and reverse frames −1 to −3 remain anchored to contig coordinates while panning.</dd>
+          <dt>Genetic code</dt>
+          <dd>This example uses NCBI table 11. Starts and stops come from the selected table.</dd>
+          <dt>Backward compatibility</dt>
+          <dd>Translation is represented by an optional sequence setting. Existing JSON without it keeps established rendering.</dd>
+          <dt>Layout parity</dt>
+          <dd>The same renderer and settings support circular and linear maps.</dd>
+        </dl>
+        <span class="badge">Development prototype</span>
+      </aside>
+    </div>
+  </main>
+  <script>
+    const format = new URLSearchParams(window.location.search).get('format') || 'circular';
+    document.getElementById('layout-title').textContent = `${format[0].toUpperCase()}${format.slice(1)} layout`;
+    const cgv = new CGView.Viewer('#viewer', {width: 820, height: 650});
+    fetch('http://localhost:8767/test/maps/test_zoom_details.json')
+      .then(response => response.json())
+      .then(json => {
+        cgv.io.loadJSON(json);
+        cgv.format = format;
+        cgv.legend.visible = false;
+        cgv.annotation.visible = false;
+        cgv.settings.showFeatureDirectionIndicators = false;
+        cgv.settings.showFeatureTrackLabels = false;
+        cgv.draw();
+        const target = cgv.features(1).mapRange.middle;
+        cgv.zoomTo(target, cgv.maxZoomFactor, {duration: 0});
+        window.proposalViewer = cgv;
+      });
+  </script>
+</body>
+</html>
