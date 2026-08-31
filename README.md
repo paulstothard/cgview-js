@@ -39,7 +39,7 @@ performance, and downstream [Proksee](https://proksee.ca) integration are being
 evaluated explicitly before those enhancements are proposed upstream.
 
 The upstream contribution work is tracked in
-[UPSTREAM_CONTRIBUTION_PLAN.md](UPSTREAM_CONTRIBUTION_PLAN.md). Small verified
+[UPSTREAM_CONTRIBUTION_PLAN.md](https://github.com/paulstothard/cgview-js/blob/planning/upstream-contributions/UPSTREAM_CONTRIBUTION_PLAN.md). Small verified
 bug fixes are submitted independently; larger API or rendering changes are
 discussed with the maintainer before clean implementation pull requests are
 prepared.
