@@ -24,8 +24,9 @@ The following rules apply throughout the upstreaming process:
 3. Build every proposed contribution from the current `upstream/main`.
 4. Reconstruct the smallest necessary patch instead of assuming an existing
    development commit can be cherry-picked safely.
-5. Do not contact upstream, open an issue, or open a pull request until Paul has
-   reviewed the complete proposed text, diff, tests, and screenshots.
+5. Submit only independently verified, focused packages. Paul authorized the
+   upstreaming program on 2026-08-30; this does not authorize mixing unrelated
+   enhancements or bypassing design discussion for new APIs.
 6. Keep fork-specific descriptions and demo defaults out of upstream patches.
 7. Treat backward compatibility, performance, circular and linear layouts, SVG,
    and potential Proksee integration as explicit review areas.
@@ -75,6 +76,8 @@ baseline using tests taken from the development history.
   therefore an explicit non-applicable case.
 - Proksee impact: no JSON or data-model change; Proksee should inherit the
   interaction fix automatically when it updates CGView.js.
+- Submitted upstream: [sciguy/cgview-js#23](https://github.com/sciguy/cgview-js/pull/23).
+- Focused fork commit: `9d82a8c`.
 
 The existing development commit also contains local changelog and test-page
 cache-busting edits. Those will not be copied into the upstream patch.
@@ -100,6 +103,8 @@ cache-busting edits. Those will not be copied into the upstream patch.
 - Performance check: compare full and fast draw timing on the large test map,
   because the correction runs in the feature drawing path.
 - Proksee impact: no JSON or API change; corrected rendering only.
+- Submitted upstream: [sciguy/cgview-js#24](https://github.com/sciguy/cgview-js/pull/24).
+- Focused fork commit: `9cbd3d7`.
 
 Although the source patch applies cleanly to the current upstream baseline, it
 will still be reconstructed on a fresh branch and reviewed for simpler naming,
@@ -129,9 +134,12 @@ allocation cost, and pre-existing edge cases before a pull request is proposed.
 ### SVG export during progressive canvas drawing
 
 - Relevant development source: `b24b768`.
-- Status: reproduce independently on upstream before classifying as an upstream
-  bug. The current patch depends on the full development branch's export and
-  progressive-rendering context and cannot be submitted verbatim.
+- Upstream reproduction: confirmed with a deterministic 6,400-feature,
+  four-slot harness. Unmodified upstream stops at 0/4 full-quality live slots;
+  the focused fix completes 4/4 while producing the same complete SVG.
+- Status: reconstructed independently from upstream and submitted as
+  [sciguy/cgview-js#25](https://github.com/sciguy/cgview-js/pull/25).
+- Focused fork commit: `3c5fe7d`.
 - Required evidence: a large map that is still drawing, an immediate SVG export,
   proof of incomplete live Canvas rendering before the fix, proof of complete
   Canvas and SVG output afterward, and no extra draw loop.
@@ -388,18 +396,15 @@ library should change its defaults.
 
 ## Proposed contribution order
 
-1. Prepare `fix/clear-hover-on-leave` from fresh upstream `main`.
-2. Run focused and full tests, capture circular and linear evidence, and draft
-   the complete PR description for Paul's review.
-3. Ask Jason whether a small direct bug-fix PR is welcome; open it only with
-   Paul's approval.
-4. Wait for feedback rather than immediately opening several PRs.
-5. Prepare the wrapped-feature clipping fix as the second independent change.
-6. Write one design issue covering the sequence-detail vision and proposed
+1. Monitor the three submitted, independently verified bug-fix PRs and respond
+   to maintainer review without mixing their scopes.
+2. Finish Safari-native verification before proposing the large-radius path
+   workaround; do not submit the earlier failed delayed-redraw experiment.
+3. Write one design issue covering the sequence-detail vision and proposed
    decomposition; do not attach the complete 7,000-line development diff.
-7. Treat track sizing and plot rendering as separate design topics rather than
+4. Treat track sizing and plot rendering as separate design topics rather than
    appendices to sequence translation.
-8. Keep the complete development branch public for demonstration and recovery,
+5. Keep the complete development branch public for demonstration and recovery,
    but never present it as a ready-to-merge upstream change.
 
 ## Proksee integration checklist

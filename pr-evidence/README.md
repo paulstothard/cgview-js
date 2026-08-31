@@ -16,3 +16,7 @@ Each pair shows an active feature hover followed by the pointer outside the view
 - `canvas-circular-linear-fixed.png` verifies both layouts using Canvas.
 - `svg-circular-linear-fixed.png` verifies both layouts through CGView's SVG export path.
 
+## PR 25: SVG export during progressive Canvas drawing
+
+- `upstream-stopped-early.png` shows unmodified upstream stopping at 0/4 full-quality live Canvas slots after a synchronous SVG export.
+- `fixed-completes.png` shows the focused branch completing all 4/4 live slots while producing the same complete SVG.
