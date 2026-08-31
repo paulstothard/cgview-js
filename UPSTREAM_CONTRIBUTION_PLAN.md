@@ -311,6 +311,11 @@ still requires automated geometry and clipping tests plus a dense-map benchmark.
 
 ### E. Zoomed feature-track names
 
+Prepared discussion package:
+[design evidence, SVG verification, and draft](https://github.com/paulstothard/cgview-js/tree/planning/upstream-contributions/design-evidence/track-names).
+Keep it queued behind the current upstream review and the preceding visual
+enhancement packages.
+
 Development commits:
 
 - `d4a7ef9` — renderer, settings, JSON, and tests.
@@ -319,6 +324,12 @@ Development commits:
 The upstream proposal must distinguish a track's actual name from its data type
 or legend item. Labels should appear only when space and zoom allow, avoid
 feature labels, work on both sides of the backbone, and remain optional.
+
+The evidence package uses deliberately different track names, feature names,
+types, sources, and legend items. It verifies one name per visible track side,
+circular glyph-by-glyph curvature, straight linear placement, and matching halo
+and fill paint in SVG. The upstream default should remain off initially even
+though the development demonstration enables the option.
 
 ### F. Stable track sizing
 

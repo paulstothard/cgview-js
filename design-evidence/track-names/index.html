@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CGView zoomed feature-track name proposal</title>
+  <link rel="stylesheet" href="http://localhost:8766/cgview-js/docs/dist/cgview.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f5f7f9; color: #20262d; font: 16px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    main { width: 1180px; margin: 22px auto; }
+    h1 { margin: 0 0 4px; font-size: 25px; }
+    .subtitle { margin: 0 0 16px; color: #606a75; }
+    .card { display: grid; grid-template-columns: 820px 1fr; gap: 18px; padding: 18px; border: 1px solid #d9dee3; border-radius: 14px; background: white; box-shadow: 0 2px 10px rgba(20, 30, 40, 0.04); }
+    #viewer { width: 820px; height: 650px; overflow: hidden; border: 1px solid #e0e4e8; border-radius: 8px; background: white; }
+    aside { padding: 2px 3px; }
+    h2 { margin: 0 0 14px; font-size: 19px; }
+    h3 { margin: 13px 0 2px; font-size: 15px; }
+    p { margin: 0; color: #59636e; }
+    code { font-size: 13px; }
+    .tag { display: inline-block; margin-top: 16px; padding: 4px 9px; border-radius: 999px; background: #e8f6ed; color: #267345; font-size: 12px; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Feature-track names at close zoom</h1>
+    <p class="subtitle">Proposed compact identifiers for retaining lane context after overview structure leaves the viewport.</p>
+    <div class="card">
+      <div id="viewer"></div>
+      <aside>
+        <h2 id="layout-title"></h2>
+        <h3>Actual track identity</h3>
+        <p>Text comes from <code>track.name</code>, not from a legend item, feature type, or data method.</p>
+        <h3>Only when useful</h3>
+        <p>Names appear after lanes become individually readable and only when their rendered side has sufficient thickness and length.</p>
+        <h3>Track-aware grouping</h3>
+        <p>An <code>around</code> track gets one identifier per visible side; multiple lanes on the same side share one identifier.</p>
+        <h3>Stable edge placement</h3>
+        <p>Labels stay just inside the leading visible edge so the viewer can identify lanes without covering their center.</p>
+        <h3>Layout parity</h3>
+        <p>Circular text follows the track arc; linear text remains straight. Both receive an automatic background-derived halo.</p>
+        <h3>Backward compatibility</h3>
+        <p>The upstream proposal recommends opt-in behavior initially, even though the development demo enables it.</p>
+        <span class="tag">Development prototype</span>
+      </aside>
+    </div>
+    <textarea id="svg-output" hidden></textarea>
+  </main>
+  <script src="http://localhost:8766/cgview-js/docs/scripts/d3.min.js"></script>
+  <script src="http://localhost:8766/cgview-js/docs/scripts/svgcanvas.iife.js"></script>
+  <script src="http://localhost:8766/cgview-js/docs/dist/cgview.js?v=track-names-proposal-1"></script>
+  <script>
+    const format = new URLSearchParams(window.location.search).get('format') || 'circular';
+    document.getElementById('layout-title').textContent = `${format[0].toUpperCase()}${format.slice(1)} layout`;
+    const cgv = new CGView.Viewer('#viewer', {width: 820, height: 650, SVGContext: svgcanvas.Context});
+    fetch('http://localhost:8766/cgview-js/docs/test/maps/test_zoom_details.json')
+      .then(response => response.json())
+      .then(json => {
+        json.cgview.settings.format = format;
+        json.cgview.settings.showFeatureDirectionIndicators = false;
+        json.cgview.settings.showFeatureTrackLabels = true;
+        json.cgview.sequence.translation.visible = false;
+        json.cgview.legend.visible = false;
+        json.cgview.annotation.labelPosition = 'none';
+        json.cgview.ruler.labelStyle = 'default';
+        json.cgview.tracks[0].name = 'Curated genes';
+        json.cgview.tracks[0].thicknessRatio = 2.4;
+        json.cgview.features.push(
+          {name: 'orf-a', type: 'ORF', start: 58, stop: 146, strand: 1, source: 'predicted', legend: 'Regulation'},
+          {name: 'orf-b', type: 'ORF', start: 206, stop: 292, strand: 1, source: 'predicted', legend: 'Transport'}
+        );
+        json.cgview.tracks.push({
+          name: 'Predicted ORFs',
+          separateFeaturesBy: 'none',
+          position: 'outside',
+          thicknessRatio: 1.4,
+          dataType: 'feature',
+          dataMethod: 'source',
+          dataKeys: 'predicted'
+        });
+        cgv.io.loadJSON(json);
+        cgv.zoomTo(178, 7, {duration: 0});
+        setTimeout(() => {
+          document.getElementById('svg-output').value = cgv.io.getSVG();
+        }, 350);
+        window.proposalViewer = cgv;
+      });
+  </script>
+</body>
+</html>
