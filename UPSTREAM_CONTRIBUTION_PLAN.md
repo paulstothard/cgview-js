@@ -352,6 +352,12 @@ user-facing control should map to the underlying model.
 
 ### G. Pixel-aware plot rendering
 
+Prepared discussion package:
+[upstream comparison, SVG observations, tests, and draft](https://github.com/paulstothard/cgview-js/tree/planning/upstream-contributions/design-evidence/plot-rendering).
+Keep this queued as a rendering/API discussion. The package compares pristine
+upstream `75afe9a` with the settled implementation and explicitly excludes the
+superseded extrema envelope.
+
 Development commits:
 
 - `ec4279a` — screen-aware mean contours and bar-plot preservation.
@@ -365,6 +371,12 @@ envelope. It needs before/after images, numeric invariants, baseline-crossing
 tests, bar-plot compatibility, circular/linear Canvas/SVG parity, and large-map
 benchmarks. The description must explain that aggregation reduces display noise
 without inventing interpolated biological values.
+
+On the controlled 69,034 bp evidence map, the settled renderer reduced SVG line
+commands from roughly 414,000 to 6,808 (circular) and 2,453 (linear), while all
+11 focused plot tests passed. The upstream default remains an explicit design
+question because changing omitted/legacy plots from steps to contours is a
+visible compatibility decision.
 
 ### H. Viewer presentation defaults and demo-only polish
 

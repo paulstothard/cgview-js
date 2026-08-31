@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="http://localhost:8766/cgview-js/docs/dist/cgview.css" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: white; }
+    #viewer { width: 535px; height: 500px; }
+  </style>
+</head>
+<body>
+  <div id="viewer"></div>
+  <textarea id="svg-output" hidden></textarea>
+  <output id="metrics" hidden></output>
+  <script src="http://localhost:8766/cgview-js/docs/scripts/d3.min.js"></script>
+  <script src="http://localhost:8766/cgview-js/docs/scripts/svgcanvas.iife.js"></script>
+  <script>
+    const parameters = new URLSearchParams(window.location.search);
+    const implementation = parameters.get('implementation') || 'development';
+    const format = parameters.get('format') || 'circular';
+    const generateSVG = parameters.get('svg') === '1';
+    const script = document.createElement('script');
+    script.src = implementation === 'upstream' ?
+      'http://localhost:8766/cgview-upstream-baseline/docs/dist/cgview.js?v=plot-evidence-upstream-1' :
+      'http://localhost:8766/cgview-js/docs/dist/cgview.js?v=plot-evidence-development-1';
+    script.onload = initialize;
+    document.head.appendChild(script);
+
+    async function initialize() {
+      const response = await fetch('http://localhost:8766/cgview-js/docs/test/maps/basic_mito.json');
+      const json = await response.json();
+      json.cgview.settings.format = format;
+      json.cgview.settings.backgroundColor = 'white';
+      json.cgview.settings.showShading = false;
+      json.cgview.settings.initialMapThicknessProportion = 0.22;
+      json.cgview.settings.maxMapThicknessProportion = 0.6;
+      json.cgview.settings.maxSlotThickness = 110;
+      json.cgview.backbone = {...(json.cgview.backbone || {}), color: '#8e969e', thickness: 6};
+      json.cgview.annotation = {...(json.cgview.annotation || {}), visible: false};
+      json.cgview.legend.visible = false;
+      json.cgview.features = [];
+      json.cgview.tracks = json.cgview.tracks
+        .filter(track => track.dataType === 'plot')
+        .map(track => ({...track, thicknessRatio: 3}));
+      const cgv = new CGView.Viewer('#viewer', {width: 535, height: 500, SVGContext: svgcanvas.Context});
+      cgv.io.loadJSON(json);
+      const drawStart = performance.now();
+      cgv.draw();
+      const drawTime = performance.now() - drawStart;
+      if (generateSVG) {
+        setTimeout(() => {
+          const svgStart = performance.now();
+          const svg = cgv.io.getSVG();
+          const svgTime = performance.now() - svgStart;
+          document.getElementById('svg-output').value = svg;
+          document.getElementById('metrics').value = JSON.stringify({
+            implementation, format, drawTime, svgTime, svgLength: svg.length,
+            pathCount: (svg.match(/<path/g) || []).length,
+            lineCommands: (svg.match(/\bL\s/g) || []).length
+          });
+        }, 450);
+      } else {
+        document.getElementById('metrics').value = JSON.stringify({implementation, format, drawTime});
+      }
+      window.evidenceViewer = cgv;
+    }
+  </script>
+</body>
+</html>

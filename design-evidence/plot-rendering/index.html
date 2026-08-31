@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CGView pixel-aware plot-rendering proposal</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f5f7f9; color: #20262d; font: 15px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    main { width: 1180px; margin: 18px auto; }
+    h1 { margin: 0 0 3px; font-size: 24px; }
+    .subtitle { margin: 0 0 13px; color: #606a75; }
+    .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .panel { padding: 12px; border: 1px solid #d9dee3; border-radius: 12px; background: white; box-shadow: 0 2px 10px rgba(20, 30, 40, 0.04); }
+    h2 { margin: 0 0 3px; font-size: 18px; }
+    .caption { margin: 0 0 7px; color: #69737d; }
+    iframe { display: block; width: 537px; height: 502px; border: 1px solid #e0e4e8; border-radius: 7px; background: white; }
+    .notes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; margin-top: 13px; }
+    .note { padding: 9px 11px; border: 1px solid #dfe4e8; border-radius: 9px; background: white; }
+    .note strong { display: block; margin-bottom: 2px; }
+    .note span { color: #5e6872; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Pixel-aware line-plot contours</h1>
+    <p class="subtitle">The same sequence-derived GC plots rendered at the same dimensions from current upstream and the settled development prototype.</p>
+    <div class="comparison">
+      <section class="panel">
+        <h2>Current upstream renderer</h2>
+        <p class="caption">Constant-radius steps and abrupt radial transitions.</p>
+        <iframe id="upstream" title="Current upstream plot"></iframe>
+      </section>
+      <section class="panel">
+        <h2>Settled prototype</h2>
+        <p class="caption">Genome-anchored pixel bins, weighted means, direct contours.</p>
+        <iframe id="development" title="Pixel-aware plot"></iframe>
+      </section>
+    </div>
+    <div class="notes">
+      <div class="note"><strong>Display-aware</strong><span>Dense samples are aggregated only when multiple genomic intervals map into one screen pixel.</span></div>
+      <div class="note"><strong>Stable while panning</strong><span>Power-of-two bins are anchored to genome coordinates instead of the current viewport edge.</span></div>
+      <div class="note"><strong>No extrema envelope</strong><span>The rejected min/max overlay is absent; it caused misleading spikes and poor SVG output.</span></div>
+      <div class="note"><strong>Bar compatibility</strong><span>Plots explicitly using bar geometry retain the established stepped renderer.</span></div>
+    </div>
+    <output id="metrics" hidden></output>
+  </main>
+  <script>
+    const format = new URLSearchParams(window.location.search).get('format') || 'circular';
+    document.getElementById('upstream').src = `viewer.html?implementation=upstream&format=${format}`;
+    document.getElementById('development').src = `viewer.html?implementation=development&format=${format}`;
+    const timer = setInterval(() => {
+      const frames = ['upstream', 'development'].map(id => document.getElementById(id).contentDocument);
+      const values = frames.map(frame => frame?.getElementById('metrics')?.value).filter(Boolean);
+      if (values.length === 2) {
+        clearInterval(timer);
+        document.getElementById('metrics').value = JSON.stringify(values.map(JSON.parse));
+      }
+    }, 100);
+  </script>
+</body>
+</html>
