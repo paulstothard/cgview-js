@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CGView unnamed feature popover regression</title>
+  <link rel="stylesheet" href="http://localhost:8766/cgview-js/docs/dist/cgview.css">
+  <style>
+    body { margin: 0; padding: 24px; color: #20252b; font-family: system-ui, sans-serif; background: #f4f6f8; }
+    h1 { margin: 0 0 6px; font-size: 24px; }
+    .intro { margin: 0 0 20px; color: #5b6470; }
+    .comparison { display: flex; gap: 24px; flex-wrap: wrap; }
+    figure { margin: 0; padding: 16px; border: 1px solid #d9dee5; border-radius: 10px; background: white; }
+    figcaption { margin-bottom: 10px; font-size: 18px; font-weight: 650; }
+    .viewer { width: 520px; height: 420px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="http://localhost:8766/cgview-js/docs/dist/cgview.js"></script>
+</head>
+<body>
+  <h1>Default popover for an unnamed feature</h1>
+  <p class="intro">The feature has no explicit name but does have a standard <code>locus_tag</code> qualifier.</p>
+  <div class="comparison">
+    <figure>
+      <figcaption>Before — missing value exposed</figcaption>
+      <div id="before" class="viewer"></div>
+    </figure>
+    <figure>
+      <figcaption>After — useful qualifier fallback</figcaption>
+      <div id="after" class="viewer"></div>
+    </figure>
+  </div>
+  <script>
+    function createViewer(selector, useFallback) {
+      const cgv = new CGView.Viewer(selector, {
+        width: 520,
+        height: 420,
+        sequence: {length: 10000},
+      });
+      const feature = cgv.addFeatures({
+        type: 'CDS',
+        start: 1600,
+        stop: 6200,
+        source: 'popover-demo',
+        legend: 'CDS',
+        qualifiers: {locus_tag: ['ABC_001']},
+      })[0];
+      cgv.addTracks({name: 'Features', dataType: 'feature', dataMethod: 'source', dataKeys: ['popover-demo']});
+      cgv.draw();
+
+      if (!useFallback) {
+        cgv.highlighter.featurePopoverContentsDefault = function(event) {
+          const hovered = event.element;
+          return `<div style="margin: 0 5px; font-size: 14px">
+            <div>${hovered.type}: ${hovered.name}<div>
+            <div class="track-data">Length: ${hovered.length.toLocaleString()} bp</div>
+          </div>`;
+        };
+      }
+
+      cgv.highlighter.mouseOver({
+        elementType: 'feature',
+        element: feature,
+        canvasX: 215,
+        canvasY: 205,
+      });
+      return cgv;
+    }
+
+    createViewer('#before', false);
+    createViewer('#after', true);
+  </script>
+</body>
+</html>
