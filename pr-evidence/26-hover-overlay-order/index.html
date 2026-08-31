@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CGView hover overlay regression</title>
+  <link rel="stylesheet" href="http://localhost:8766/cgview-js/docs/dist/cgview.css">
+  <style>
+    body { margin: 0; padding: 24px; color: #20252b; font-family: system-ui, sans-serif; background: #f4f6f8; }
+    h1 { margin: 0 0 6px; font-size: 24px; }
+    .intro { margin: 0 0 20px; color: #5b6470; }
+    .comparison { display: flex; gap: 24px; flex-wrap: wrap; }
+    figure { margin: 0; padding: 16px; border: 1px solid #d9dee5; border-radius: 10px; background: white; }
+    figcaption { margin-bottom: 10px; font-size: 18px; font-weight: 650; }
+    .note { margin-top: 8px; width: 560px; color: #59636f; font-size: 13px; }
+    .viewer { width: 560px; height: 560px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="http://localhost:8766/cgview-js/docs/dist/cgview.js"></script>
+</head>
+<body>
+  <h1>Transient hover graphics and persistent overlays</h1>
+  <p class="intro">Both maps show the same hovered feature. The left reproduces the current upstream layer order; the right applies the fix.</p>
+  <div class="comparison">
+    <figure>
+      <figcaption>Before — hover covers overlays</figcaption>
+      <div id="before" class="viewer"></div>
+      <div class="note">The blue hover rendering crosses the legend and the “Reference map” caption.</div>
+    </figure>
+    <figure>
+      <figcaption>After — overlays remain readable</figcaption>
+      <div id="after" class="viewer"></div>
+      <div class="note">Only the overlay rectangles are cleared from the transient UI layer; the map itself is not redrawn.</div>
+    </figure>
+  </div>
+  <script>
+    const format = new URLSearchParams(window.location.search).get('format') || 'circular';
+
+    function createViewer(selector, preserveOverlays) {
+      const cgv = new CGView.Viewer(selector, {
+        width: 560,
+        height: 560,
+        sequence: {length: 10000},
+        legend: {
+          position: {xPercent: 83, yPercent: format === 'linear' ? 49 : 25},
+          anchor: 'middle-center',
+          backgroundColor: 'rgba(255,255,255,0.9)',
+        },
+      });
+      cgv.format = format;
+
+      cgv.legend.addItems([
+        {name: 'Replication', swatchColor: '#3d7fb5', decoration: 'arrow'},
+        {name: 'Transport', swatchColor: '#56a56e', decoration: 'arrow'},
+        {name: 'Regulation', swatchColor: '#efaa3b', decoration: 'arrow'},
+      ]);
+      const feature = cgv.addFeatures({
+        name: 'large replication region',
+        type: 'CDS',
+        start: 400,
+        stop: 9600,
+        source: 'hover-demo',
+        legend: 'Replication',
+      })[0];
+      cgv.addFeatures({
+        name: 'transport locus',
+        type: 'CDS',
+        start: 2100,
+        stop: 4100,
+        source: 'inner-demo',
+        legend: 'Transport',
+      });
+      cgv.addTracks([
+        {name: 'Hovered feature', dataType: 'feature', dataMethod: 'source', dataKeys: ['hover-demo'], position: 'outside', thicknessRatio: 3},
+        {name: 'Context', dataType: 'feature', dataMethod: 'source', dataKeys: ['inner-demo'], position: 'inside', thicknessRatio: 2},
+      ]);
+      cgv.addCaptions({
+        name: 'Reference map',
+        position: {xPercent: 17, yPercent: format === 'linear' ? 49 : 62},
+        anchor: 'middle-center',
+        font: 'sans-serif, bold, 18',
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        fontColor: '#28313a',
+      });
+      cgv.draw();
+      cgv.highlighter.feature.popovers = false;
+
+      if (!preserveOverlays) {
+        cgv.highlighter._clearOverlayBoxes = () => {};
+      }
+      cgv.highlighter.mouseOver({elementType: 'feature', element: feature});
+      return cgv;
+    }
+
+    window.beforeViewer = createViewer('#before', false);
+    window.afterViewer = createViewer('#after', true);
+  </script>
+</body>
+</html>
