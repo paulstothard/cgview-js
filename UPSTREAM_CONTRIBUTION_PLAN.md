@@ -285,6 +285,12 @@ curvature, linear placement, background compositing, and exported SVG strokes.
 
 ### D. Feature direction cues and adaptive arrows
 
+Prepared discussion package:
+[design evidence, SVG verification, and draft](https://github.com/paulstothard/cgview-js/tree/planning/upstream-contributions/design-evidence/direction-cues).
+Keep it queued behind the current upstream review. The base-detail cue renderer
+and the overview arrowhead cleanup are related visually, but should remain
+separate implementation contributions unless the maintainer requests otherwise.
+
 Development commits:
 
 - `1b2327d` — direction chevrons in feature bodies.
@@ -297,6 +303,11 @@ The upstream version should be optional initially unless Jason prefers a new
 default. The proposal must show forward and reverse strands, short and long
 features, features with and without labels, circular arc geometry, linear
 geometry, and behavior when the feature is too narrow for a cue.
+
+The evidence package confirms one combined Canvas/SVG path per visible feature
+segment, stable map-coordinate placement, label-aware gutters, and opposing
+forward/reverse cues in circular and linear layouts. A clean implementation PR
+still requires automated geometry and clipping tests plus a dense-map benchmark.
 
 ### E. Zoomed feature-track names
 
