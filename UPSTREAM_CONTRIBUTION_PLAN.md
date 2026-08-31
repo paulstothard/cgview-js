@@ -333,6 +333,11 @@ though the development demonstration enables the option.
 
 ### F. Stable track sizing
 
+Prepared discussion package:
+[design evidence, numeric verification, tests, and draft](https://github.com/paulstothard/cgview-js/tree/planning/upstream-contributions/design-evidence/track-sizing).
+Keep this queued as an API/layout discussion; the test-page slider is evidence
+of a simple application experience, not the proposed upstream public surface.
+
 Development commits:
 
 - `17cfc89` — serialized, zoom-aware sizing model.
