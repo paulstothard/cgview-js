@@ -233,6 +233,12 @@ Important review points:
 
 ### B. Inline feature labels and placement
 
+Prepared discussion package:
+[design evidence and draft](https://github.com/paulstothard/cgview-js/tree/planning/upstream-contributions/design-evidence/inline-labels).
+Keep this queued on the fork until the maintainer has had a reasonable chance
+to respond to sequence-detail issue #28; submitting every enhancement topic at
+once would make review harder and risks obscuring the focused bug-fix PRs.
+
 Development commits:
 
 - `1e15210` — show labels at overview when they fit.
