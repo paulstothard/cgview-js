@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CGView detailed sequence-ruler proposal</title>
+  <link rel="stylesheet" href="http://localhost:8766/cgview-js/docs/dist/cgview.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f5f7f9; color: #20262d; font: 16px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    main { width: 1180px; margin: 22px auto; }
+    h1 { margin: 0 0 4px; font-size: 25px; }
+    .subtitle { margin: 0 0 16px; color: #606a75; }
+    .card { display: grid; grid-template-columns: 820px 1fr; gap: 18px; padding: 18px; border: 1px solid #d9dee3; border-radius: 14px; background: white; box-shadow: 0 2px 10px rgba(20, 30, 40, 0.04); }
+    #viewer { width: 820px; height: 650px; overflow: hidden; border: 1px solid #e0e4e8; border-radius: 8px; background: #eef2f6; }
+    aside { padding: 2px 3px; }
+    h2 { margin: 0 0 14px; font-size: 19px; }
+    h3 { margin: 13px 0 2px; font-size: 15px; }
+    p { margin: 0; color: #59636e; }
+    code { font-size: 13px; }
+    .tag { display: inline-block; margin-top: 16px; padding: 4px 9px; border-radius: 999px; background: #e8f6ed; color: #267345; font-size: 12px; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Detailed sequence ruler</h1>
+    <p class="subtitle">Proposed layout-aware coordinate labels that remain legible around circular maps and in exported graphics.</p>
+    <div class="card">
+      <div id="viewer"></div>
+      <aside>
+        <h2 id="layout-title"></h2>
+        <h3>True circular text</h3>
+        <p>Each glyph follows the exact ruler circumference. Labels on the lower semicircle reverse direction so they stay naturally readable.</p>
+        <h3>Linear parity</h3>
+        <p>The same setting falls back to ordinary straight coordinate text when the map is linear.</p>
+        <h3>Automatic protection</h3>
+        <p>A rounded background-colored text stroke is painted before the glyph fill. It protects the letters without drawing rectangular boxes.</p>
+        <h3>Foreground ordering</h3>
+        <p>Labels are painted after slots and sequence detail so the protection cannot be overdrawn by map data.</p>
+        <h3>Export parity</h3>
+        <p>The glyph geometry and halo use the same Canvas calls for live rendering and SVG export.</p>
+        <h3>Backward compatibility</h3>
+        <p><code>ruler.labelStyle</code> remains <code>default</code> unless a map selects the detailed style.</p>
+        <span class="tag">Development prototype</span>
+      </aside>
+    </div>
+    <textarea id="svg-output" hidden></textarea>
+  </main>
+  <script src="http://localhost:8766/cgview-js/docs/scripts/d3.min.js"></script>
+  <script src="http://localhost:8766/cgview-js/docs/scripts/svgcanvas.iife.js"></script>
+  <script src="http://localhost:8766/cgview-js/docs/dist/cgview.js?v=detailed-ruler-proposal-1"></script>
+  <script>
+    const format = new URLSearchParams(window.location.search).get('format') || 'circular';
+    document.getElementById('layout-title').textContent = `${format[0].toUpperCase()}${format.slice(1)} layout`;
+    const cgv = new CGView.Viewer('#viewer', {width: 820, height: 650, SVGContext: svgcanvas.Context});
+    fetch('http://localhost:8766/cgview-js/docs/test/maps/test_zoom_details.json')
+      .then(response => response.json())
+      .then(json => {
+        json.cgview.settings.format = format;
+        json.cgview.settings.backgroundColor = '#eef2f6';
+        json.cgview.settings.showFeatureDirectionIndicators = false;
+        json.cgview.settings.showFeatureTrackLabels = false;
+        json.cgview.sequence.translation.visible = false;
+        json.cgview.annotation.visible = false;
+        json.cgview.legend.visible = false;
+        Object.assign(json.cgview.ruler, {
+          font: 'sans-serif,plain,14',
+          color: '#20262d',
+          labelPosition: 'outer',
+          labelStyle: 'curved',
+          labelHaloWidth: 5,
+        });
+        cgv.io.loadJSON(json);
+        setTimeout(() => {
+          document.getElementById('svg-output').value = cgv.io.getSVG();
+        }, 250);
+        window.proposalViewer = cgv;
+      });
+  </script>
+</body>
+</html>

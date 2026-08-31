@@ -264,6 +264,10 @@ and behavior when no label text exists.
 
 ### C. Detailed sequence ruler and protected coordinate labels
 
+Prepared discussion package:
+[design evidence, SVG verification, and draft](https://github.com/paulstothard/cgview-js/tree/planning/upstream-contributions/design-evidence/detailed-ruler).
+Keep it queued behind the current upstream review and the inline-label package.
+
 Development commits:
 
 - `6f3ace9` — descriptive demo naming.
