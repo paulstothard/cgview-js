@@ -150,11 +150,19 @@ allocation cost, and pre-existing edge cases before a pull request is proposed.
 
 - Relevant development sources: `4df74c3`, `4664da0`.
 - `4df74c3` mixes two concerns: keeping transient graphics away from legends and
-  captions, and improving titles for unnamed features. These must be split.
+  captions, and improving titles for unnamed features. They were reconstructed
+  as separate focused fixes:
+  - Overlay ordering: submitted as
+    [sciguy/cgview-js#26](https://github.com/sciguy/cgview-js/pull/26), focused
+    fork commit `e274e62`.
+  - Unnamed feature popovers: submitted as
+    [sciguy/cgview-js#27](https://github.com/sciguy/cgview-js/pull/27), focused
+    fork commit `2e630a2`.
 - `4664da0` adds background-aware highlight color selection and disables a
   second shading pass. It depends on later color and feature work.
-- Status: separate reproduction and design review. Do not combine popover text,
-  overlay layering, color calculation, and shading into one PR.
+- Status: the two independent bugs are submitted. Background-aware highlight
+  color and shading remain a separate reproduction/design task and must not be
+  appended to either PR.
 - Risk: medium because UI-layer clearing can interact with multiple overlays.
 
 ### Deferred full-quality rendering after interaction
@@ -183,6 +191,9 @@ They should be introduced through one concise design issue, with screenshots
 and proposed boundaries, before implementation branches are prepared.
 
 ### A. Base-pair sequence detail and six-frame translation
+
+Upstream design discussion:
+[sciguy/cgview-js#28](https://github.com/sciguy/cgview-js/issues/28).
 
 Development commits:
 
@@ -355,7 +366,7 @@ library should change its defaults.
 | `af85e55` | Upstream bug | Verified; recommended first PR |
 | `25c3785` | Test-page UI | Fork/supporting demo only |
 | `5eba011` | Translation performance | Include with translation renderer |
-| `4df74c3` | Mixed hover fixes | Split and investigate |
+| `4df74c3` | Mixed hover fixes | Split into submitted PRs #26 and #27 |
 | `1b2327d` | Direction cues | Design discussion |
 | `1883177` | Labels and direction | Include only after both APIs settle |
 | `9de7c52` | Detailed ruler | Design discussion |
@@ -392,16 +403,18 @@ library should change its defaults.
 | `49aec28` | External-label SVG | Include with label renderer |
 | `4800bcd` | SVG test-page UI | Fork-specific unless requested |
 | `4664da0` | Hover appearance | Reproduce and split from label/color dependencies |
-| `b24b768` | SVG/progressive drawing | Reproduce independently before classification |
+| `b24b768` | SVG/progressive drawing | Reproduced; submitted as PR #25 |
 
 ## Proposed contribution order
 
-1. Monitor the three submitted, independently verified bug-fix PRs and respond
+1. Monitor the five submitted, independently verified bug-fix PRs and respond
    to maintainer review without mixing their scopes.
 2. Finish Safari-native verification before proposing the large-radius path
    workaround; do not submit the earlier failed delayed-redraw experiment.
-3. Write one design issue covering the sequence-detail vision and proposed
-   decomposition; do not attach the complete 7,000-line development diff.
+3. Continue the sequence-detail architecture discussion in
+   [issue #28](https://github.com/sciguy/cgview-js/issues/28). Only reconstruct
+   implementation branches after the ownership and PR boundaries are agreed;
+   do not attach the complete development diff.
 4. Treat track sizing and plot rendering as separate design topics rather than
    appendices to sequence translation.
 5. Keep the complete development branch public for demonstration and recovery,
